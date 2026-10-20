@@ -1,0 +1,18 @@
+- id: enterprise-account
+  disabled: true
+
+- id: enterprise-default-model
+  config:
+    provider: harness-admin
+    model: enterprise-smoke
+
+- id: llm-enterprise-gateway
+  config:
+    gatewayBaseURL: https://admin.example.test/v1
+    models:
+      - id: enterprise-smoke
+        name: Enterprise Smoke
+
+- insert:
+    - id: enterprise-smoke-account
+      name: ./fixtures/account.mjs

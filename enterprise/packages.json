@@ -1,0 +1,11 @@
+[
+  "packages/bundle/enterprise",
+  "packages/credentials/enterprise-account",
+  "packages/credentials/enterprise-account-oidc",
+  "packages/api/enterprise-account-controller",
+  "packages/api/enterprise-model-controller",
+  "packages/core/agent-enterprise-default-model",
+  "packages/client/ui-enterprise-account",
+  "packages/client/ui-enterprise-model-selection",
+  "packages/llm/llm-enterprise-gateway"
+]

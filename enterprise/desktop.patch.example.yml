@@ -1,0 +1,26 @@
+# Public Desktop configuration. Replace placeholders before copying into the desktop profile patch.
+- id: enterprise-default-model
+  config:
+    provider: harness-admin
+    model: your-admin-model-code
+
+- id: enterprise-account
+  config:
+    issuer: https://admin.company.example
+    clientId: your-public-desktop-client-id
+    clientAuthMethod: none
+    redirectUri: http://127.0.0.1/oauth/callback
+    redirectMode: loopback-random-port
+    gatewayOrigin: https://admin.company.example
+
+- id: llm-enterprise-gateway
+  config:
+    gatewayBaseURL: https://admin.company.example/v1
+    models:
+      - id: your-admin-model-code
+
+- id: enterprise-account-controller
+  config:
+    desktop:
+      usageUrl: https://admin.company.example
+      topUpUrl: https://admin.company.example

@@ -1,0 +1,66 @@
+# Enterprise identity layer applied after the ordinary Web/Desktop bundle.
+# It replaces the official account entry points without changing upstream defaults.
+
+- id: deepseek-account
+  disabled: true
+
+- id: llm-deepseek-account
+  disabled: true
+
+- id: llm-deepseek
+  disabled: true
+
+- id: llm-pi-ai
+  disabled: true
+
+- id: ui-settings-account
+  disabled: true
+
+- id: account-controller
+  disabled: true
+
+- id: agent-default-model
+  disabled: true
+
+- id: ui-model-selection
+  disabled: true
+
+- insert:
+    - id: enterprise-default-model
+      name: '@deepseek-ai/dsh-agent-enterprise-default-model'
+      config:
+        provider: harness-admin
+        model: !!js "JSON.parse(process.env.DSH_ENTERPRISE_MODELS ?? process.env.HARNESS_ADMIN_MODELS ?? '[]')[0]?.id"
+
+    - id: enterprise-model-controller
+      name: '@deepseek-ai/dsh-api-enterprise-model-controller'
+
+    - id: enterprise-model-selection
+      name: '@deepseek-ai/dsh-client-ui-enterprise-model-selection'
+
+    - id: enterprise-account
+      name: '@deepseek-ai/dsh-enterprise-account-oidc'
+      config:
+        issuer: !!js process.env.DSH_ENTERPRISE_OIDC_ISSUER ?? process.env.HARNESS_ADMIN_OIDC_ISSUER
+        clientId: !!js "ctx.get('profileContext')?.name === 'desktop' ? process.env.DSH_ENTERPRISE_DESKTOP_OIDC_CLIENT_ID : process.env.HARNESS_ADMIN_WEB_OIDC_CLIENT_ID"
+        clientSecret: !!js "ctx.get('profileContext')?.name === 'desktop' ? undefined : process.env.HARNESS_ADMIN_WEB_OIDC_CLIENT_SECRET"
+        clientAuthMethod: !!js "ctx.get('profileContext')?.name === 'desktop' ? 'none' : 'client_secret_basic'"
+        redirectUri: !!js "ctx.get('profileContext')?.name === 'desktop' ? 'http://127.0.0.1/oauth/callback' : process.env.HARNESS_ADMIN_WEB_OIDC_REDIRECT_URI"
+        redirectMode: !!js "ctx.get('profileContext')?.name === 'desktop' ? 'loopback-random-port' : 'fixed'"
+        gatewayOrigin: !!js new URL(process.env.DSH_ENTERPRISE_GATEWAY_BASE_URL ?? process.env.HARNESS_ADMIN_GATEWAY_BASE_URL).origin
+        allowLoopbackHttp: !!js process.env.DSH_ENTERPRISE_ALLOW_LOOPBACK_HTTP === 'true'
+
+    - id: llm-enterprise-gateway
+      name: '@deepseek-ai/dsh-llm-enterprise-gateway'
+      config:
+        gatewayBaseURL: !!js process.env.DSH_ENTERPRISE_GATEWAY_BASE_URL ?? process.env.HARNESS_ADMIN_GATEWAY_BASE_URL
+        models: !!js JSON.parse(process.env.DSH_ENTERPRISE_MODELS ?? process.env.HARNESS_ADMIN_MODELS ?? '[]')
+        allowLoopbackHttp: !!js process.env.DSH_ENTERPRISE_ALLOW_LOOPBACK_HTTP === 'true'
+
+    - id: enterprise-account-controller
+      name: '@deepseek-ai/dsh-api-enterprise-account-controller'
+      config:
+        desktop: !!js "ctx.get('profileContext')?.name === 'desktop' ? { usageUrl: process.env.HARNESS_ADMIN_PORTAL_URL ?? process.env.HARNESS_ADMIN_OIDC_ISSUER ?? process.env.DSH_ENTERPRISE_OIDC_ISSUER, topUpUrl: process.env.HARNESS_ADMIN_PORTAL_URL ?? process.env.HARNESS_ADMIN_OIDC_ISSUER ?? process.env.DSH_ENTERPRISE_OIDC_ISSUER, allowLoopbackHttp: process.env.DSH_ENTERPRISE_ALLOW_LOOPBACK_HTTP === 'true' } : undefined"
+
+    - id: ui-enterprise-account
+      name: '@deepseek-ai/dsh-client-ui-enterprise-account'

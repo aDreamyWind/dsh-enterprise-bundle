@@ -1,0 +1,43 @@
+# Bilingual-pair consistency record for README.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write packages/client/ui-enterprise-model-selection/README.md
+/:
+  en: 0e3c89b5f62e4c85
+  zh: aa2fc9926ca8d12a
+/deepseek-ai-dsh-client-ui-enterprise-model-selection:
+  en: 1fa739988e55ce5b
+  zh: 650aca0285e168f4
+/deepseek-ai-dsh-client-ui-enterprise-model-selection/summary:
+  en: 5e525b5e5ea7841c
+  zh: a6a3c85a91df3423
+/deepseek-ai-dsh-client-ui-enterprise-model-selection/table-of-contents:
+  en: 76368b6b1da79c80
+  zh: ea48d69af9c89d59
+/deepseek-ai-dsh-client-ui-enterprise-model-selection/use-this-package:
+  en: 4035c1308cd30429
+  zh: e39f19c06b0979ca
+/deepseek-ai-dsh-client-ui-enterprise-model-selection/understand-the-implementation:
+  en: 5846e3e88658374f
+  zh: 8c1d7b28becb32ab
+/deepseek-ai-dsh-client-ui-enterprise-model-selection/model-experience:
+  en: 215e7ba838619b7b
+  zh: 215e7ba838619b7b
+/deepseek-ai-dsh-client-ui-enterprise-model-selection/model-experience/model-selection-controls:
+  en: 61124f958adf4ca8
+  zh: 5b8fde07e104bd9e
+/deepseek-ai-dsh-client-ui-enterprise-model-selection/model-experience/model-selection-controls/what-the-model-sees:
+  en: 6c99a4020f6c27f1
+  zh: b0cd97fd1058f928
+/deepseek-ai-dsh-client-ui-enterprise-model-selection/model-experience/model-selection-controls/token-effect:
+  en: f62df28214b78e48
+  zh: 4ceffe7b15af8b17
+/deepseek-ai-dsh-client-ui-enterprise-model-selection/model-experience/model-selection-controls/kv-cache-effect:
+  en: 20ef663d4c9023bd
+  zh: 239a1699f640fd84
+/deepseek-ai-dsh-client-ui-enterprise-model-selection/known-limitations-and-deferred-work:
+  en: 743545003df79060
+  zh: 75faf8dfca3ee6fe
+/deepseek-ai-dsh-client-ui-enterprise-model-selection/known-limitations-and-deferred-work/dev-note:
+  en: e67f633dc6fe7773
+  zh: 8ec3e73528ddb1a6

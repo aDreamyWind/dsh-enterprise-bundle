@@ -1,0 +1,25 @@
+# Bilingual-pair consistency record for README.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write enterprise/README.md
+/harness-enterprise-plugin-distribution-tools:
+  en: 5697aeff6f3bba19
+  zh: 0b1a71d1ffa4f827
+/harness-enterprise-plugin-distribution-tools/usage:
+  en: 03d5c033e8459fd4
+  zh: 63c81a2a7811940c
+/harness-enterprise-plugin-distribution-tools/usage/build-a-release-from-the-current-project:
+  en: d2ac4bd67e465bfe
+  zh: 30e6705e845fb7c3
+/harness-enterprise-plugin-distribution-tools/usage/install-into-official-web:
+  en: 1186fdb88e8e9e66
+  zh: 0ef9108b0447aa5b
+/harness-enterprise-plugin-distribution-tools/usage/install-into-official-desktop:
+  en: a3692eaad55b5a87
+  zh: e11b02a15d3938ca
+/harness-enterprise-plugin-distribution-tools/build-detached-sources:
+  en: 505e9b6449da63fb
+  zh: 624f80209a9f888e
+/harness-enterprise-plugin-distribution-tools/updates-and-retained-data:
+  en: 1ccb38bfb73b7dd7
+  zh: 57b6adb2515fbed1

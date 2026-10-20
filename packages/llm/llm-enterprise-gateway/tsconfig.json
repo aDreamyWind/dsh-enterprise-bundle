@@ -1,0 +1,51 @@
+{
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "lib/types"
+  },
+  "include": [
+    "src"
+  ],
+  "references": [
+    {
+      "path": "../../../vendor/cosmokit"
+    },
+    {
+      "path": "../../../vendor/cordis"
+    },
+    {
+      "path": "../../core/agent-enterprise-default-model"
+    },
+    {
+      "path": "../../attachment/attachment"
+    },
+    {
+      "path": "../../credentials/enterprise-account"
+    },
+    {
+      "path": "../../fs/fs"
+    },
+    {
+      "path": "../llm"
+    },
+    {
+      "path": "../llm-pi-ai"
+    },
+    {
+      "path": "../../../vendor/schemastery"
+    },
+    {
+      "path": "../../credentials/credentials"
+    },
+    {
+      "path": "../../util/launch-environment"
+    },
+    {
+      "path": "../../util/timeout"
+    },
+    {
+      "path": "../../util/values"
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+# Build output and dependencies
+dist/
+lib/
+node_modules/
+*.tsbuildinfo
+*.tgz
+
+# Local configuration and credentials
+.env
+.env.*
+!.env.example
+
+# Logs, coverage, and caches
+*.log
+coverage/
+.cache/
+
+# Editor and OS files
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

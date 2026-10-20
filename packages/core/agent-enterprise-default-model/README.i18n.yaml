@@ -1,0 +1,43 @@
+# Bilingual-pair consistency record for README.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write packages/core/agent-enterprise-default-model/README.md
+/:
+  en: 0c4389ae9abe5b03
+  zh: c440a4a910355ae3
+/deepseek-ai-dsh-agent-enterprise-default-model:
+  en: 118c6d3605bd50b3
+  zh: eb0e220328c3599f
+/deepseek-ai-dsh-agent-enterprise-default-model/summary:
+  en: c931e26f67785800
+  zh: 79832084afa294b1
+/deepseek-ai-dsh-agent-enterprise-default-model/table-of-contents:
+  en: 76368b6b1da79c80
+  zh: ea48d69af9c89d59
+/deepseek-ai-dsh-agent-enterprise-default-model/use-this-package:
+  en: 1e6e403193ffdc7f
+  zh: 68acee38c0820793
+/deepseek-ai-dsh-agent-enterprise-default-model/understand-the-implementation:
+  en: d8ff487573fb3911
+  zh: 5a2d9c8c60eb33e4
+/deepseek-ai-dsh-agent-enterprise-default-model/model-experience:
+  en: 215e7ba838619b7b
+  zh: 215e7ba838619b7b
+/deepseek-ai-dsh-agent-enterprise-default-model/model-experience/default-model-routing:
+  en: 8111bfdb988a52d1
+  zh: 34b12f16aae5642d
+/deepseek-ai-dsh-agent-enterprise-default-model/model-experience/default-model-routing/what-the-model-sees:
+  en: 8fac6809df735bb1
+  zh: 75f7759509f5249a
+/deepseek-ai-dsh-agent-enterprise-default-model/model-experience/default-model-routing/token-effect:
+  en: a80e7f0b7ac8ca89
+  zh: af53c334ece51906
+/deepseek-ai-dsh-agent-enterprise-default-model/model-experience/default-model-routing/kv-cache-effect:
+  en: 9cc850b888a24e6e
+  zh: e1ed532de9cfa708
+/deepseek-ai-dsh-agent-enterprise-default-model/known-limitations-and-deferred-work:
+  en: 7cb1f97e18f5258d
+  zh: 6e20028f0c4c092f
+/deepseek-ai-dsh-agent-enterprise-default-model/known-limitations-and-deferred-work/dev-note:
+  en: e67f633dc6fe7773
+  zh: 8ec3e73528ddb1a6

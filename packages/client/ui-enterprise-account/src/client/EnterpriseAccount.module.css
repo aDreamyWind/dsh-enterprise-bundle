@@ -1,0 +1,101 @@
+.dialog {
+  box-sizing: border-box;
+  border: 0.5px solid var(--dsw-alias-border-inverted);
+  user-select: none;
+}
+
+.gate,
+.section {
+  display: flex;
+  flex-direction: column;
+  color: var(--dsw-alias-label-primary);
+}
+
+.gate {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 24px 24px 0;
+  gap: 20px;
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.title {
+  margin: 0;
+  font-size: 18px;
+  line-height: 26px;
+  font-weight: 500;
+}
+
+.description,
+.status,
+.label {
+  margin: 0;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 14px;
+  line-height: 22px;
+}
+
+.status {
+  min-height: 22px;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.action {
+  min-width: 96px;
+  height: 36px;
+  font-weight: 500;
+}
+
+.spinner {
+  animation: enterprise-account-spin 1s linear infinite;
+}
+
+.section {
+  gap: 16px;
+  padding: 8px 0;
+  font-size: 14px;
+  line-height: 22px;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border: 0.5px solid var(--dsw-alias-settings-card-stroke);
+  border-radius: var(--dsw-radius-xl);
+  background: var(--dsw-alias-settings-card-fill);
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+
+.value {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  text-align: right;
+}
+
+@keyframes enterprise-account-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner { animation: none; }
+}

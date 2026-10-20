@@ -1,0 +1,9 @@
+{
+  "name": "@adreamywind/harness-enterprise-source",
+  "private": true,
+  "type": "module",
+  "version": "0.2.1-alpha.4",
+  "scripts": {
+    "build": "node enterprise/build.mjs"
+  }
+}
