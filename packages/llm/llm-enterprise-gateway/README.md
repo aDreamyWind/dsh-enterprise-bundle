@@ -47,7 +47,9 @@ Mount the package after `llm`, `agent-default-model`, `enterprise-account-oidc`,
 <details>
 <summary>Implementation internals — click to expand</summary>
 
-The adapter reuses the maintained pi-ai OpenAI Completions translator for streaming, tools, multimodal message content, and usage chunks. Model listing and invocation use a Host-only access token carrying `model.invoke`; listing reads only the Admin-authorized model set and uses Admin names and vision capabilities when present. A directory failure shows no configured fallback models, and direct requests require a successful directory read. HTTP 401 performs one serialized refresh-token rotation; Chat Completions retries only before any response content has reached the caller. A second 401 retires the matching login. HTTP 403, 404, 409, and 429 become stable Harness failure codes without clearing the login. For HTTP 403, inspect the Harness Admin gateway call record to distinguish gateway rejection from a forwarded upstream provider rejection.
+The adapter reuses the maintained pi-ai OpenAI Completions translator for streaming, tools, multimodal message content, and usage chunks. Model listing and invocation use a Host-only access token carrying `model.invoke`; listing reads only the Admin-authorized model set and uses Admin names and vision capabilities when present. A directory failure shows no configured fallback models, and direct requests require a successful directory read. HTTP 401 performs one serialized refresh-token rotation; Chat Completions retries only before any response content has reached the caller. A second 401 retires the matching login. HTTP 403, 404, and 409 become stable Harness failure codes without clearing the login. For HTTP 403, inspect the Harness Admin gateway call record to distinguish gateway rejection from a forwarded upstream provider rejection.
+
+An exhausted quota maps to `QUOTA` and is not retried; a temporary HTTP 429 rate limit maps to `RATE_LIMIT` and carries the gateway's `Retry-After` delay. Harness retries only when that delay fits the provider's normal retry budget (10 seconds by default); a longer delay leaves the request failed so the user can retry later. Neither failure clears the login. Check the Admin call record if the gateway forwarded a provider rejection.
 
 | Source | Purpose |
 |---|---|
@@ -85,4 +87,4 @@ Authentication, routing, and gateway error mapping do not change the model reque
 <a id="dev-note"></a>
 ### Dev Note
 
-The [enterprise OIDC profile-layer Agent Note](../../../.agents/notes/implemented/architecture/2026-10-09-enterprise-oidc-profile-layer.md) owns the additive integration and Host-only credential decisions.
+None.

@@ -20,6 +20,11 @@ interface GatewayFixture {
   catalogHeaders: IncomingMessage['headers'][]
 }
 
+interface GatewayErrorResponse {
+  code: string
+  retryAfter?: string
+}
+
 it('exposes the Cordis apply module without a competing default export', () => {
   expect(EnterpriseGateway.apply).toBeTypeOf('function')
   expect(EnterpriseGateway).not.toHaveProperty('default')
@@ -30,6 +35,7 @@ async function gatewayFixture(
   catalogModels: readonly Record<string, unknown>[] = [{ id: 'catalog-code', object: 'model' }],
   catalogStatus: number | number[] = 200,
   beforeCatalogResponse?: () => Promise<void>,
+  gatewayError?: GatewayErrorResponse,
 ): Promise<GatewayFixture> {
   const headers: IncomingMessage['headers'][] = []
   const requests: Array<Record<string, unknown>> = []
@@ -50,8 +56,13 @@ async function gatewayFixture(
     requests.push(JSON.parse(await readBody(request)) as Record<string, unknown>)
     const status = statuses.shift() ?? 500
     if (status !== 200) {
-      response.writeHead(status, { 'content-type': 'application/json' })
-        .end(JSON.stringify({ error: { message: `admin-${String(status)}` } }))
+      response.writeHead(status, {
+        'content-type': 'application/json',
+        ...gatewayError?.retryAfter === undefined ? {} : { 'retry-after': gatewayError.retryAfter },
+      }).end(JSON.stringify({ error: {
+        message: `admin-${String(status)}`,
+        ...gatewayError === undefined ? {} : { type: 'rate_limit_error', code: gatewayError.code },
+      } }))
       return
     }
     response.writeHead(200, { 'content-type': 'text/event-stream' })
@@ -103,8 +114,9 @@ async function run(
   statuses: number[],
   catalogModels?: readonly Record<string, unknown>[],
   catalogStatus?: number,
+  gatewayError?: GatewayErrorResponse,
 ) {
-  const gateway = await gatewayFixture(statuses, catalogModels, catalogStatus)
+  const gateway = await gatewayFixture(statuses, catalogModels, catalogStatus, undefined, gatewayError)
   const { account, defaults, ctx } = await mountGateway(gateway)
   const prepared = await ctx.llm.prepareCall({ provider: 'harness-admin', model: 'catalog-code' })
   const chunks = []
@@ -193,6 +205,32 @@ it.each([
   const gateway = await gatewayFixture([], entries)
   const { ctx } = await mountGateway(gateway)
   await expect(ctx.llm.listModels('harness-admin')).rejects.toMatchObject({ code: 'INVALID_RESPONSE' })
+})
+
+it('stops retries for an exhausted Harness Admin token quota', async () => {
+  const { chunks, gateway, ctx } = await run([429], undefined, undefined, { code: 'insufficient_quota' })
+  const failure = chunks.at(-1)
+  expect(failure).toMatchObject({
+    type: 'finish',
+    reason: { kind: 'error', failure: { code: 'QUOTA', status: 429 } },
+  })
+  expect(gateway.requests).toHaveLength(1)
+  const prepared = await ctx.llm.prepareCall({ provider: 'harness-admin', model: 'catalog-code' })
+  expect(prepared.retryPolicy.mode).toBe('normal')
+  if (prepared.retryPolicy.mode === 'normal') expect(prepared.retryPolicy.retryableCodes).not.toContain('QUOTA')
+})
+
+it('retains the Admin Retry-After delay for temporary rate limits', async () => {
+  const { chunks, gateway, ctx } = await run([429], undefined, undefined, {
+    code: 'rate_limit_exceeded', retryAfter: '60',
+  })
+  expect(chunks.at(-1)).toMatchObject({
+    type: 'finish',
+    reason: { kind: 'error', failure: { code: 'RATE_LIMIT', status: 429, providerRetryAfterMs: 60_000 } },
+  })
+  expect(gateway.requests).toHaveLength(1)
+  const prepared = await ctx.llm.prepareCall({ provider: 'harness-admin', model: 'catalog-code' })
+  expect(prepared.retryPolicy.maxDelayMs).toBeLessThan(60_000)
 })
 
 it.each([0, -1])('checks the complete UTF-8 directory response at its byte limit plus %s', async (delta) => {

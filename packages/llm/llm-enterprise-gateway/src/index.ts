@@ -7,6 +7,7 @@ import type {} from '@deepseek-ai/dsh-fs'
 import {
   LlmAdapter,
   LlmError,
+  QUOTA_EXCEEDED_CODE,
   resolveImageAttachmentAccess,
   type GenerateOptions,
   type LlmModelInfo,
@@ -92,6 +93,11 @@ interface AvailableCatalog {
 interface EnterpriseFailure {
   chunk: Extract<StreamChunk, { type: 'finish' }>
   status?: number
+}
+
+interface GatewayHttpFailure {
+  status: number
+  retryAfterMs?: number
 }
 
 /** Register the Harness Admin model route; listing requires an OIDC access token. */
@@ -261,6 +267,7 @@ export class EnterpriseGatewayAdapter extends LlmAdapter {
     let forcedToken: string | undefined
     request: for (let attempt = 0; attempt < 2; attempt++) {
       let requestToken: string | undefined
+      let gatewayFailure: GatewayHttpFailure | undefined
       const adapter = this.createAdapter(async () => {
         requestToken = forcedToken ?? await this.ctx.enterpriseAccount.resolveAccessToken(
           this.config.requestURL,
@@ -270,13 +277,13 @@ export class EnterpriseGatewayAdapter extends LlmAdapter {
           throw new LlmError('Sign in to Harness Admin before invoking an enterprise model', 'AUTH')
         }
         return requestToken
-      }, profiles)
+      }, observeGatewayResponses(profiles, (failure) => { gatewayFailure = failure }))
       let emitted = false
       let pendingUsage: Extract<StreamChunk, { type: 'usage' }> | undefined
       for await (const source of adapter.stream(options)) {
         if (source.type === 'usage') { pendingUsage = source; continue }
         if (source.type !== 'finish') { emitted = true; yield source; continue }
-        const failure = mapEnterpriseFailure(source)
+        const failure = mapEnterpriseFailure(source, gatewayFailure)
         if (failure.status === 401 && !emitted && attempt === 0 && requestToken !== undefined) {
           forcedToken = await this.ctx.enterpriseAccount.refreshAccessToken(
             this.config.requestURL,
@@ -425,9 +432,43 @@ function validateGatewayBaseURL(value: string, allowLoopbackHttp: boolean): stri
   return url.href.replace(/\/$/, '')
 }
 
-function mapEnterpriseFailure(chunk: Extract<StreamChunk, { type: 'finish' }>): EnterpriseFailure {
+function observeGatewayResponses(
+  profiles: ReadonlyMap<string, ResolvedPiAiProviderProfile>,
+  onFailure: (failure: GatewayHttpFailure) => void,
+): ReadonlyMap<string, ResolvedPiAiProviderProfile> {
+  return new Map([...profiles].map(([name, profile]) => {
+    const provider = profile.piProvider
+    if (provider === undefined) return [name, profile]
+    const observedFetch: typeof fetch = async (input, init) => {
+      const response = await fetch(input, init)
+      if (!response.ok) {
+        const retryAfterMs = response.status === 429 ? retryAfterDelay(response.headers.get('retry-after')) : undefined
+        onFailure({ status: response.status, ...retryAfterMs === undefined ? {} : { retryAfterMs } })
+      }
+      return response
+    }
+    return [name, {
+      ...profile,
+      piProvider: {
+        ...provider,
+        streamSimple: (model, context, options) => provider.streamSimple(model, context, { ...options, fetch: observedFetch }),
+      },
+    }]
+  }))
+}
+
+function retryAfterDelay(value: string | null): number | undefined {
+  if (value === null) return undefined
+  const seconds = /^\d+$/u.test(value.trim()) ? Number(value.trim()) : undefined
+  const delay = seconds === undefined ? Date.parse(value) - Date.now() : seconds * 1_000
+  return Number.isSafeInteger(delay) && delay > 0 ? delay : undefined
+}
+
+function mapEnterpriseFailure(
+  chunk: Extract<StreamChunk, { type: 'finish' }>, gatewayFailure?: GatewayHttpFailure,
+): EnterpriseFailure {
   if (chunk.reason.kind !== 'error') return { chunk }
-  const status = chunk.reason.failure.status ?? httpStatus(chunk.reason.failure.message)
+  const status = gatewayFailure?.status ?? chunk.reason.failure.status ?? httpStatus(chunk.reason.failure.message)
   if (status === undefined) return { chunk }
   const facts = { ...chunk.reason.failure, status }
   switch (status) {
@@ -448,8 +489,19 @@ function mapEnterpriseFailure(chunk: Extract<StreamChunk, { type: 'finish' }>): 
         ...facts, code: 'MODEL_UNAVAILABLE', message: 'The Harness Admin model or provider connection is disabled',
       } } } }
     case 429:
+      if (chunk.reason.failure.code === QUOTA_EXCEEDED_CODE) {
+        return { status, chunk: { ...chunk, reason: { kind: 'error', failure: {
+          ...facts, code: QUOTA_EXCEEDED_CODE,
+          message: 'Model token quota is exhausted; ask an administrator to check the Harness Admin call record',
+        } } } }
+      }
       return { status, chunk: { ...chunk, reason: { kind: 'error', failure: {
-        ...facts, code: 'RATE_LIMIT', message: 'Harness Admin rate or token quota is exhausted',
+        ...facts,
+        ...gatewayFailure?.retryAfterMs === undefined ? {} : { providerRetryAfterMs: gatewayFailure.retryAfterMs },
+        code: 'RATE_LIMIT',
+        message: gatewayFailure?.retryAfterMs === undefined
+          ? 'Harness Admin is rate limiting model requests; retry later'
+          : `Harness Admin is rate limiting model requests; retry after ${Math.ceil(gatewayFailure.retryAfterMs / 1_000)} seconds`,
       } } } }
     default:
       return { status, chunk: { ...chunk, reason: { kind: 'error', failure: facts } } }
