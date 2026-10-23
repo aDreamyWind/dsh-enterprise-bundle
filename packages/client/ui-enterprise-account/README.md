@@ -22,6 +22,8 @@ The enterprise account UI blocks the application until OIDC login succeeds and e
 
 Mount this client plugin with the enterprise account controller. A non-dismissible application overlay observes the reconnect-safe account stream. One click starts login and opens the authorization URL in a separate browser page; the Host owns callback handling and publishes the signed-in state. Standard browsers reserve that page during the click and navigate it when the Host returns the URL. Desktop asks Electron to open the URL in the system browser. A second open button appears only when browser popup policy blocked the reserved page. The settings section displays only sanitized profile data and provides local-first sign-out.
 
+`startTimeoutMs` sets how long the browser waits for the Host's sign-in response (15 seconds by default). If that request stalls, the reserved blank page closes and the UI reports that the Host may still be processing it. Keep one DSH tab open, refresh to check the account state, and retry. A response arriving after the deadline cannot reopen the old authorization page.
+
 All product copy is owned by the typed English and Chinese dictionaries. Tokens, authorization codes, PKCE material, and raw ID-token claims are absent from the Remote API and browser state.
 
 The plugin mounts the generated enterprise account methods through the shared Remote transport before activating its UI registrations. It does not require changes to the official Remote assembly; unloading it withdraws those methods and registrations.

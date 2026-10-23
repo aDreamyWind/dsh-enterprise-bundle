@@ -4,6 +4,7 @@ import { Button, IconLoadingOutlineRegular, Modal } from '@deepseek-ai/dsh-clien
 import type { HostObservable, InjectFace, PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import type { EnterpriseAccountView, EnterpriseSignInAttemptId } from '@deepseek-ai/dsh-enterprise-account/types'
 import type { EnterpriseAccountKey } from './locales.ts'
+import { EnterpriseStartTimeoutError } from './start.ts'
 import css from './EnterpriseAccount.module.css'
 
 /** Browser-owned account state layered over the Host snapshot stream. */
@@ -15,7 +16,8 @@ export interface EnterpriseAccountSnapshot {
 /** Credential-free operations shared by the login gate and settings page. */
 export interface EnterpriseAccountInjected {
   hooks: { account: HostObservable<EnterpriseAccountSnapshot> }
-  start(): Promise<void>
+  /** Start one Host attempt and return its browser-safe state before the configured wait expires. */
+  start(): Promise<EnterpriseAccountView>
   cancel(id: EnterpriseSignInAttemptId): Promise<void>
   signOut(): Promise<void>
 }
@@ -31,9 +33,12 @@ export function EnterpriseLoginGate({ useAccount, start, cancel, t }: PropsRunti
   const account = useAccount(value => value)
   const [busy, setBusy] = useState(false)
   const [failed, setFailed] = useState(false)
+  const [timedOut, setTimedOut] = useState(false)
   const [popupBlocked, setPopupBlocked] = useState(false)
+  const [hasStarted, setHasStarted] = useState(false)
+  const [requestedAttemptId, setRequestedAttemptId] = useState<EnterpriseSignInAttemptId | null>(null)
   const pendingWindow = useRef<Window | null>(null)
-  const openedAttempt = useRef<string | null>(null)
+  const openedAttempt = useRef<EnterpriseSignInAttemptId | null>(null)
   const attempt = account.view?.attempt
   const authorizeUrl = attempt?.phase === 'waiting-browser' ? attempt.authorizeUrl : undefined
   useEffect(() => {
@@ -44,6 +49,7 @@ export function EnterpriseLoginGate({ useAccount, start, cancel, t }: PropsRunti
     }
     if (authorizeUrl === undefined || attempt === null || attempt === undefined
       || openedAttempt.current === attempt.id) return
+    if (hasStarted && requestedAttemptId !== attempt.id) return
     openedAttempt.current = attempt.id
     const popup = pendingWindow.current
     pendingWindow.current = null
@@ -57,11 +63,11 @@ export function EnterpriseLoginGate({ useAccount, start, cancel, t }: PropsRunti
       return
     }
     setPopupBlocked(true)
-  }, [account.view?.status, attempt, authorizeUrl])
+  }, [account.view?.status, attempt, authorizeUrl, hasStarted, requestedAttemptId])
   if (account.view?.status === 'signed-in') return null
-  const active = attempt !== null && attempt !== undefined
+  const active = !timedOut && attempt !== null && attempt !== undefined
     && ['initializing', 'waiting-browser', 'exchanging', 'committing'].includes(attempt.phase)
-  const error = failed || account.failed || attempt?.phase === 'failed' || attempt?.phase === 'expired'
+  const error = failed || timedOut || account.failed || attempt?.phase === 'failed' || attempt?.phase === 'expired'
   const run = async (operation: () => Promise<void>): Promise<boolean> => {
     setBusy(true)
     setFailed(false)
@@ -69,19 +75,26 @@ export function EnterpriseLoginGate({ useAccount, start, cancel, t }: PropsRunti
   }
   const begin = (): void => {
     setPopupBlocked(false)
+    setHasStarted(true)
+    setRequestedAttemptId(null)
+    setTimedOut(false)
+    setFailed(false)
     openedAttempt.current = null
     const popup = window.location.protocol === 'dsh:' ? null : window.open('about:blank', '_blank')
     if (popup !== null) popup.opener = null
     else if (window.location.protocol !== 'dsh:') setPopupBlocked(true)
     pendingWindow.current = popup
-    void run(start).then((started) => {
-      if (started) return
+    setBusy(true)
+    void start().then((view) => { setRequestedAttemptId(view.attempt?.id ?? null) }).catch((error: unknown) => {
+      setFailed(true)
+      setTimedOut(error instanceof EnterpriseStartTimeoutError)
       pendingWindow.current?.close()
       pendingWindow.current = null
-    })
+    }).finally(() => { setBusy(false) })
   }
   const status: EnterpriseAccountKey | null = account.view === undefined ? 'loading'
-    : attempt?.phase === 'expired' ? 'expired'
+    : timedOut ? 'startTimedOut'
+      : attempt?.phase === 'expired' ? 'expired'
       : error ? account.failed ? 'streamFailed' : 'failed'
         : attempt?.phase === 'initializing' ? 'initializing'
           : attempt?.phase === 'waiting-browser' ? 'waiting'
@@ -97,7 +110,7 @@ export function EnterpriseLoginGate({ useAccount, start, cancel, t }: PropsRunti
       <div className={css.actions}>
         {active && attempt.phase !== 'committing' && <Button variant="outline" className={css.action} disabled={busy}
           onClick={() => { void run(() => cancel(attempt.id)) }}>{t('cancel')}</Button>}
-        {popupBlocked && authorizeUrl !== undefined
+        {popupBlocked && authorizeUrl !== undefined && (!hasStarted || requestedAttemptId === attempt?.id)
           ? <Button variant="primary" className={css.action}
             onClick={() => { window.open(authorizeUrl, '_blank', 'noopener,noreferrer') }}>{t('open')}</Button>
           : <Button variant="primary" className={css.action} disabled={busy || active || account.view === undefined}
@@ -118,9 +131,12 @@ export function EnterpriseAccountSection({ useAccount, start, signOut, t }: Prop
   const account = useAccount(value => value)
   const [busy, setBusy] = useState(false)
   const [failed, setFailed] = useState(false)
+  const [timedOut, setTimedOut] = useState(false)
   const [popupBlocked, setPopupBlocked] = useState(false)
+  const [hasStarted, setHasStarted] = useState(false)
+  const [requestedAttemptId, setRequestedAttemptId] = useState<EnterpriseSignInAttemptId | null>(null)
   const pendingWindow = useRef<Window | null>(null)
-  const openedAttempt = useRef<string | null>(null)
+  const openedAttempt = useRef<EnterpriseSignInAttemptId | null>(null)
   const attempt = account.view?.attempt
   const authorizeUrl = attempt?.phase === 'waiting-browser' ? attempt.authorizeUrl : undefined
   useEffect(() => {
@@ -131,15 +147,19 @@ export function EnterpriseAccountSection({ useAccount, start, signOut, t }: Prop
     }
     if (authorizeUrl === undefined || attempt === null || attempt === undefined
       || openedAttempt.current === attempt.id) return
+    if (hasStarted && requestedAttemptId !== attempt.id) return
     openedAttempt.current = attempt.id
     const popup = pendingWindow.current
     pendingWindow.current = null
     if (popup !== null && !popup.closed) { popup.opener = null; popup.location.replace(authorizeUrl); return }
     if (window.location.protocol === 'dsh:') { window.open(authorizeUrl, '_blank', 'noopener,noreferrer'); return }
     setPopupBlocked(true)
-  }, [account.view?.reauthorizationRequired, attempt, authorizeUrl])
+  }, [account.view?.reauthorizationRequired, attempt, authorizeUrl, hasStarted, requestedAttemptId])
   const reauthorize = (): void => {
     setPopupBlocked(false)
+    setHasStarted(true)
+    setRequestedAttemptId(null)
+    setTimedOut(false)
     openedAttempt.current = null
     const popup = window.location.protocol === 'dsh:' ? null : window.open('about:blank', '_blank')
     if (popup !== null) popup.opener = null
@@ -147,10 +167,11 @@ export function EnterpriseAccountSection({ useAccount, start, signOut, t }: Prop
     pendingWindow.current = popup
     setBusy(true)
     setFailed(false)
-    void start().catch(() => {
+    void start().then((view) => { setRequestedAttemptId(view.attempt?.id ?? null) }).catch((error: unknown) => {
       pendingWindow.current?.close()
       pendingWindow.current = null
       setFailed(true)
+      setTimedOut(error instanceof EnterpriseStartTimeoutError)
     }).finally(() => setBusy(false))
   }
   const profile = account.view?.profile
@@ -168,9 +189,9 @@ export function EnterpriseAccountSection({ useAccount, start, signOut, t }: Prop
         <span className={css.value}>{profile?.organizationCode ?? profile?.organizationId ?? '—'}</span></div>
     </div>
     {account.view?.reauthorizationRequired === true && <p className={css.status} role="status">{t('reauthorizeDescription')}</p>}
-    {failed && <p className={css.status} role="alert">{t('failed')}</p>}
+    {failed && <p className={css.status} role="alert">{t(timedOut ? 'startTimedOut' : 'failed')}</p>}
     {account.view?.reauthorizationRequired === true && <div className={css.actions}>
-      {popupBlocked && authorizeUrl !== undefined
+      {popupBlocked && authorizeUrl !== undefined && (!hasStarted || requestedAttemptId === attempt?.id)
         ? <Button variant="primary" className={css.action} onClick={() => { window.open(authorizeUrl, '_blank', 'noopener,noreferrer') }}>{t('open')}</Button>
         : <Button variant="primary" className={css.action} disabled={busy} onClick={reauthorize}>{t('reauthorize')}</Button>}
     </div>}
