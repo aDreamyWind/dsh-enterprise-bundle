@@ -7,5 +7,6 @@
   "packages/core/agent-enterprise-default-model",
   "packages/client/ui-enterprise-account",
   "packages/client/ui-enterprise-model-selection",
-  "packages/llm/llm-enterprise-gateway"
+  "packages/llm/llm-enterprise-gateway",
+  "packages/mcp/mcp-enterprise-connections"
 ]

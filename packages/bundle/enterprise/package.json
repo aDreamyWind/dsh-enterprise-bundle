@@ -41,7 +41,8 @@
     "@deepseek-ai/dsh-client-ui-enterprise-account": "workspace:*",
     "@deepseek-ai/dsh-enterprise-account-oidc": "workspace:*",
     "@deepseek-ai/dsh-llm-enterprise-gateway": "workspace:*",
-    "@deepseek-ai/dsh-llm-pi-ai": "workspace:*"
+    "@deepseek-ai/dsh-llm-pi-ai": "workspace:*",
+    "@deepseek-ai/dsh-mcp-enterprise-connections": "workspace:*"
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "workspace:~"

@@ -71,3 +71,26 @@ it('shows Harness Admin organization claims in the account section', () => {
   expect(screen.getByText('tester')).toBeTruthy()
   expect(screen.getByText('engineering')).toBeTruthy()
 })
+
+it('offers a new consent attempt while keeping the signed-in settings visible', async () => {
+  const start = vi.fn(async () => {})
+  const replace = vi.fn()
+  const popup = { closed: false, opener: window, location: { replace }, close: vi.fn() } as object as Window
+  const open = vi.spyOn(window, 'open').mockReturnValue(popup)
+  const base: EnterpriseAccountView = { status: 'signed-in', reauthorizationRequired: true, attempt: null,
+    profile: { subject: 'user-1', name: null, preferredUsername: 'tester', email: null, picture: null,
+      organizationId: 'org-1', organizationCode: 'engineering' } }
+  const section = (view: EnterpriseAccountView) => <EnterpriseAccountSection {...({} as GlobalStandardProps)}
+    close={vi.fn()} useAccount={selector => selector({ view, failed: false })} start={start}
+    cancel={vi.fn(async () => {})} signOut={vi.fn(async () => {})}
+    t={key => key in zh ? zh[key as EnterpriseAccountKey] : key} />
+  const rendered = render(section(base))
+  expect(screen.getByText('engineering')).toBeTruthy()
+  expect(screen.getByText(zh.reauthorizeDescription)).toBeTruthy()
+  fireEvent.click(screen.getByRole('button', { name: zh.reauthorize }))
+  expect(open).toHaveBeenCalledExactlyOnceWith('about:blank', '_blank')
+  expect(start).toHaveBeenCalledOnce()
+  const authorizeUrl = 'https://admin.example.test/api/v1/oauth2/authorize?state=consent'
+  rendered.rerender(section({ ...base, attempt: { id, phase: 'waiting-browser', authorizeUrl } }))
+  await waitFor(() => { expect(replace).toHaveBeenCalledExactlyOnceWith(authorizeUrl) })
+})

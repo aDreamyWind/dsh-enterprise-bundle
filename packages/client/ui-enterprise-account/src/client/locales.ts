@@ -17,6 +17,8 @@ export const en = {
   organization: 'Organization',
   identity: 'Account',
   signOut: 'Sign out',
+  reauthorize: 'Update MCP access',
+  reauthorizeDescription: 'Sign in again to approve access to your assigned MCP tools. Models remain available.',
   streamFailed: 'Account status is unavailable. Reconnect and try again.',
 } as const
 
@@ -42,5 +44,7 @@ export const zh: Record<EnterpriseAccountKey, string> = {
   organization: '所属组织',
   identity: '账号',
   signOut: '退出登录',
+  reauthorize: '更新 MCP 授权',
+  reauthorizeDescription: '请重新登录并授权使用分配给你的 MCP 工具；模型仍可正常使用。',
   streamFailed: '暂时无法获取账号状态，请重新连接后重试。',
 }

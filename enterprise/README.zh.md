@@ -4,7 +4,7 @@
 
 ## 使用方式
 
-企业登录、模型网关、动态模型目录、默认模型策略和模型选择器通过外置 bundle 加载。官方的默认模型、Session API、模型选择器、RPC 汇总和 profile 模板不需要企业源码补丁。`packages.json` 列出插件拥有的源文件目录。
+企业登录、模型网关、动态模型目录、默认模型策略、模型选择器和员工 MCP 工具连接通过外置 bundle 加载。官方的默认模型、Session API、模型选择器、RPC 汇总和 profile 模板不需要企业源码补丁。`packages.json` 列出插件拥有的源文件目录。
 
 当前源码项目保留 `pnpm run start:enterprise-web` 便捷启动命令。这个命令不是官方 Harness 的命令；全新官方项目使用下面的插件安装方式。
 
@@ -29,7 +29,7 @@ pnpm dsh --profile enterprise-web --from-default-profile web --dump-config
 pnpm dsh plugin --profile enterprise-web add /absolute/path/to/enterprise-bundle.tgz
 ```
 
-第一条命令只用于首次创建新的专用 profile：它会重建已有同名 profile，升级插件时不要重复执行。第二条命令追加企业 bundle；不能省略首次复制 Web 模板的步骤，否则自定义 profile 默认只有基础服务，没有网页应用。将 `.env.example` 中的企业配置填写到该官方工作目录的 `.env`，客户端密钥只允许保存在 Web Host。本地 HTTP 调试时执行：
+第一条命令只用于首次创建新的专用 profile：它会重建已有同名 profile，升级插件时不要重复执行。第二条命令追加企业 bundle；不能省略首次复制 Web 模板的步骤，否则自定义 profile 默认只有基础服务，没有网页应用。将 `.env.example` 中的企业配置填写到该官方工作目录的 `.env`，客户端密钥只允许保存在 Web Host。员工 MCP 需要为 OIDC 客户端允许 `mcp.invoke`，已有员工需在账号设置中重新授权；每个 Web Host 仅服务一位员工。本地 HTTP 调试时执行：
 
 ```sh
 DSH_ENTERPRISE_ALLOW_LOOPBACK_HTTP=true pnpm dsh --profile enterprise-web

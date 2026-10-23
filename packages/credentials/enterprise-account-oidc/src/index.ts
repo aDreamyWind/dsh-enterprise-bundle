@@ -57,6 +57,8 @@ export interface Config {
   redirectMode?: 'fixed' | 'loopback-random-port'
   /** Exact HTTP(S) origin allowed to receive the access token. */
   gatewayOrigin: string
+  /** Additional trusted origin for employee MCP directory and gateway requests. */
+  mcpOrigin?: string
   /** OIDC scopes requested during login. */
   scopes?: string[]
   /** Upper bound for one browser login attempt. */
@@ -80,6 +82,7 @@ export const Config = Schema.object({
   redirectUri: Schema.string().required(),
   redirectMode: Schema.union(['fixed', 'loopback-random-port'] as const).default('fixed'),
   gatewayOrigin: Schema.string().required(),
+  mcpOrigin: Schema.string(),
   scopes: Schema.array(Schema.string()).default(['openid', 'profile', 'model.invoke', 'offline_access']),
   attemptTimeoutMs: Schema.number().min(1).max(3_600_000).default(600_000),
   requestTimeoutMs: Schema.number().min(1).max(120_000).default(30_000),
@@ -111,7 +114,7 @@ export class EnterpriseOidcAccount extends EnterpriseAccount {
   private readonly clientAuth: ClientAuth
   private readonly redirectUri: string
   private readonly redirectMode: 'fixed' | 'loopback-random-port'
-  private readonly gatewayOrigin: string
+  private readonly gatewayOrigins: ReadonlySet<string>
   private readonly scopes: readonly string[]
   private readonly callbackPath: string
   private readonly attemptTimeoutMs: number
@@ -134,7 +137,8 @@ export class EnterpriseOidcAccount extends EnterpriseAccount {
     this.clientAuth = resolveClientAuth(resolved.clientAuthMethod, resolved.clientId, resolved.clientSecret)
     this.redirectMode = resolved.redirectMode
     this.redirectUri = validateRedirectUri(resolved.redirectUri, this.redirectMode)
-    this.gatewayOrigin = validateOrigin(resolved.gatewayOrigin, 'gatewayOrigin')
+    this.gatewayOrigins = new Set([validateOrigin(resolved.gatewayOrigin, 'gatewayOrigin'),
+      ...resolved.mcpOrigin === undefined ? [] : [validateOrigin(resolved.mcpOrigin, 'mcpOrigin')]])
     if (!resolved.scopes.includes('openid')) throw new Error('enterprise-account: scopes must include openid')
     if (!resolved.scopes.includes('model.invoke')) throw new Error('enterprise-account: scopes must include model.invoke')
     this.scopes = [...new Set(resolved.scopes)]
@@ -184,6 +188,7 @@ export class EnterpriseOidcAccount extends EnterpriseAccount {
     const attempt = this.attempt?.view ?? null
     return {
       status: active === undefined ? 'signed-out' : 'signed-in',
+      reauthorizationRequired: active !== undefined && !hasScopes(active.scopes, this.scopes),
       profile: active?.profile ?? null,
       attempt: active === undefined && attempt?.phase === 'succeeded' ? null : attempt,
     }
@@ -266,7 +271,7 @@ export class EnterpriseOidcAccount extends EnterpriseAccount {
   }
 
   override async resolveAccessToken(url: string, requiredScopes: readonly string[]): Promise<string | undefined> {
-    if (this.closed || new URL(url).origin !== this.gatewayOrigin) return undefined
+    if (this.closed || !this.gatewayOrigins.has(new URL(url).origin)) return undefined
     const record = await this.ctx.credentials.readRecord(KEY)
     if (record === undefined) return undefined
     const current = readGrant(record)
@@ -294,7 +299,7 @@ export class EnterpriseOidcAccount extends EnterpriseAccount {
     rejectedToken: string,
     requiredScopes: readonly string[],
   ): Promise<string | undefined> {
-    if (this.closed || new URL(url).origin !== this.gatewayOrigin) return undefined
+    if (this.closed || !this.gatewayOrigins.has(new URL(url).origin)) return undefined
     const updated = await this.ctx.credentials.modifyRecord(KEY, async (record) => {
       if (record === undefined) return undefined
       const grant = readGrant(record)
@@ -516,11 +521,15 @@ export class EnterpriseOidcAccount extends EnterpriseAccount {
   private finishCallback(attempt: Attempt, success: boolean): void {
     if (attempt.callback === undefined) return
     const title = success ? 'Sign-in completed' : 'Sign-in failed'
-    const message = success ? 'Return to Harness to continue.' : 'Close this tab and retry from Harness.'
+    const message = success ? 'Sign-in completed. You can close this tab and return to Harness.' : 'Close this tab and retry from Harness.'
+    const closeNonce = success ? randomBytes(16).toString('base64') : undefined
+    const policy = closeNonce === undefined ? "default-src 'none'; frame-ancestors 'none'"
+      : `default-src 'none'; script-src 'nonce-${closeNonce}'; frame-ancestors 'none'`
+    const closeScript = closeNonce === undefined ? '' : `<script nonce="${closeNonce}">window.close()</script>`
     attempt.callback.writeHead(success ? 200 : 400, {
       'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store',
-      'content-security-policy': "default-src 'none'; frame-ancestors 'none'", 'referrer-policy': 'no-referrer',
-    }).end(`<!doctype html><html lang="en"><meta charset="utf-8"><title>${title}</title><body><p>${message}</p></body></html>`)
+      'content-security-policy': policy, 'referrer-policy': 'no-referrer',
+    }).end(`<!doctype html><html lang="en"><meta charset="utf-8"><title>${title}</title><body><p>${message}</p>${closeScript}</body></html>`)
   }
 
   private revoke(token: string): void {

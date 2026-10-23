@@ -12,6 +12,12 @@
     redirectUri: http://127.0.0.1/oauth/callback
     redirectMode: loopback-random-port
     gatewayOrigin: https://admin.company.example
+    mcpOrigin: https://admin.company.example
+    scopes: [openid, profile, model.invoke, mcp.invoke, offline_access]
+
+- id: mcp-enterprise-connections
+  config:
+    directoryUrl: https://admin.company.example/api/v1/mcp/connections
 
 - id: llm-enterprise-gateway
   config:

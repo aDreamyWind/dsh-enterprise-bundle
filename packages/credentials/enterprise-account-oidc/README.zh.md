@@ -25,6 +25,8 @@ kind: "package-reference"
 
 存储的授权对凭据子系统保持不透明。面向浏览器的状态只包含脱敏身份资料和尝试进度。访问令牌和刷新令牌始终留在 Host。刷新令牌轮换在 `credentials.modifyRecord` 内执行，防止共享同一存储的两个 Harness 进程重复使用同一个轮换令牌。
 
+授权成功后，回环回调页会尝试关闭由 Harness 打开的登录弹窗。如果浏览器保留该标签页，页面会提示手动关闭并返回 Harness。
+
 <a id="configuration"></a>
 ## 配置
 

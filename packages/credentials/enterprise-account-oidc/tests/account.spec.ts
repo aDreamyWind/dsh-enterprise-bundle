@@ -122,6 +122,7 @@ async function accountFixture(options: {
   clientId?: string
   redirectMode?: 'fixed' | 'loopback-random-port'
   redirectUri?: string
+  scopes?: string[]
 } = {}) {
   const clientAuthMethod = options.clientAuthMethod ?? 'client_secret_basic'
   const clientId = options.clientId ?? 'harness-client'
@@ -141,6 +142,8 @@ async function accountFixture(options: {
     ...(clientAuthMethod === 'none' ? {} : { clientSecret: 'harness-secret' }),
     clientAuthMethod, redirectUri, redirectMode: options.redirectMode ?? 'fixed',
     gatewayOrigin: 'https://gateway.example.test',
+    mcpOrigin: issuer.origin,
+    ...(options.scopes === undefined ? {} : { scopes: options.scopes }),
     allowLoopbackHttp: true, refreshBeforeExpiryMs: 60_000,
   })
   await provider
@@ -169,6 +172,11 @@ it('completes PKCE login, exposes only profile state, and serializes rotating re
   expect(bad.status).toBe(400)
   const callback = await fetch(`${fixture.callbackOrigin}/oauth2/callback?code=test&state=${authorize.searchParams.get('state')}`, { redirect: 'manual' })
   expect(callback.status).toBe(200)
+  const callbackHtml = await callback.text()
+  const closeNonce = callbackHtml.match(/<script nonce="([A-Za-z0-9+/=]+)">window\.close\(\)<\/script>/)?.[1]
+  expect(closeNonce).toBeDefined()
+  expect(callback.headers.get('content-security-policy')).toContain(`script-src 'nonce-${closeNonce}'`)
+  expect(callbackHtml).toContain('You can close this tab and return to Harness.')
   const signedIn = await fixture.wait('succeeded')
   expect(signedIn).toMatchObject({ status: 'signed-in', profile: {
     subject: 'user-1', name: '测试用户', preferredUsername: 'tester', email: 'user@example.test',
@@ -190,6 +198,23 @@ it('completes PKCE login, exposes only profile state, and serializes rotating re
   expect(replacements).toEqual(['access-refresh-2', 'access-refresh-2'])
   expect(fixture.issuer.refreshes()).toBe(2)
   expect((await fixture.account.signOut()).status).toBe('signed-out')
+})
+
+it('keeps model access while a stored grant needs new MCP consent', async () => {
+  const fixture = await accountFixture({ scopes: ['openid', 'profile', 'model.invoke', 'mcp.invoke', 'offline_access'] })
+  await fixture.account.startSignIn()
+  const waiting = await fixture.wait('waiting-browser')
+  const authorize = new URL(waiting.attempt!.authorizeUrl!)
+  expect(authorize.searchParams.get('scope')).toContain('mcp.invoke')
+  fixture.issuer.setNonce(authorize.searchParams.get('nonce')!)
+  await fetch(`${fixture.callbackOrigin}/oauth2/callback?code=test&state=${authorize.searchParams.get('state')}`, { redirect: 'manual' })
+  const state = await fixture.wait('succeeded')
+  expect(state).toMatchObject({ status: 'signed-in', reauthorizationRequired: true })
+  await expect(fixture.account.resolveAccessToken('https://gateway.example.test/v1/chat', ['model.invoke']))
+    .resolves.toBe('access-refresh-1')
+  await expect(fixture.account.resolveAccessToken(`${fixture.issuer.origin}/api/v1/mcp/connections`, ['mcp.invoke']))
+    .resolves.toBeUndefined()
+  await expect(fixture.account.startSignIn()).resolves.toMatchObject({ status: 'signed-in' })
 })
 
 it('uses a random loopback port and no client secret for a Desktop public client', async () => {

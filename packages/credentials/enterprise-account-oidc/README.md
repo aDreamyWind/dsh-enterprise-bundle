@@ -25,6 +25,8 @@ Mount the credentials, authorization, and Web Server services before this provid
 
 The stored grant is opaque to the credentials subsystem. Browser-facing state contains only the sanitized identity profile and attempt progress. Access and refresh tokens remain on the Host. Refresh-token rotation runs inside `credentials.modifyRecord`, preventing two Harness processes sharing one store from reusing the same rotating token.
 
+After successful authorization, the loopback callback tries to close the login popup opened by Harness. If the browser keeps the tab open, the page shows a message to close it and return to Harness.
+
 <a id="configuration"></a>
 ## Configuration
 

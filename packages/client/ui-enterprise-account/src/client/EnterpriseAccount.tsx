@@ -114,10 +114,45 @@ export function EnterpriseLoginGate({ useAccount, start, cancel, t }: PropsRunti
  * @param props - account state, localized copy, and sign-out action.
  * @returns the enterprise account settings section.
  */
-export function EnterpriseAccountSection({ useAccount, signOut, t }: PropsRuntime<'settings.section'> & Face) {
+export function EnterpriseAccountSection({ useAccount, start, signOut, t }: PropsRuntime<'settings.section'> & Face) {
   const account = useAccount(value => value)
   const [busy, setBusy] = useState(false)
   const [failed, setFailed] = useState(false)
+  const [popupBlocked, setPopupBlocked] = useState(false)
+  const pendingWindow = useRef<Window | null>(null)
+  const openedAttempt = useRef<string | null>(null)
+  const attempt = account.view?.attempt
+  const authorizeUrl = attempt?.phase === 'waiting-browser' ? attempt.authorizeUrl : undefined
+  useEffect(() => {
+    if (account.view?.reauthorizationRequired !== true) {
+      pendingWindow.current?.close()
+      pendingWindow.current = null
+      return
+    }
+    if (authorizeUrl === undefined || attempt === null || attempt === undefined
+      || openedAttempt.current === attempt.id) return
+    openedAttempt.current = attempt.id
+    const popup = pendingWindow.current
+    pendingWindow.current = null
+    if (popup !== null && !popup.closed) { popup.opener = null; popup.location.replace(authorizeUrl); return }
+    if (window.location.protocol === 'dsh:') { window.open(authorizeUrl, '_blank', 'noopener,noreferrer'); return }
+    setPopupBlocked(true)
+  }, [account.view?.reauthorizationRequired, attempt, authorizeUrl])
+  const reauthorize = (): void => {
+    setPopupBlocked(false)
+    openedAttempt.current = null
+    const popup = window.location.protocol === 'dsh:' ? null : window.open('about:blank', '_blank')
+    if (popup !== null) popup.opener = null
+    else if (window.location.protocol !== 'dsh:') setPopupBlocked(true)
+    pendingWindow.current = popup
+    setBusy(true)
+    setFailed(false)
+    void start().catch(() => {
+      pendingWindow.current?.close()
+      pendingWindow.current = null
+      setFailed(true)
+    }).finally(() => setBusy(false))
+  }
   const profile = account.view?.profile
   const leave = async (): Promise<void> => {
     setBusy(true)
@@ -132,7 +167,13 @@ export function EnterpriseAccountSection({ useAccount, signOut, t }: PropsRuntim
       <div className={css.row}><span className={css.label}>{t('organization')}</span>
         <span className={css.value}>{profile?.organizationCode ?? profile?.organizationId ?? '—'}</span></div>
     </div>
+    {account.view?.reauthorizationRequired === true && <p className={css.status} role="status">{t('reauthorizeDescription')}</p>}
     {failed && <p className={css.status} role="alert">{t('failed')}</p>}
+    {account.view?.reauthorizationRequired === true && <div className={css.actions}>
+      {popupBlocked && authorizeUrl !== undefined
+        ? <Button variant="primary" className={css.action} onClick={() => { window.open(authorizeUrl, '_blank', 'noopener,noreferrer') }}>{t('open')}</Button>
+        : <Button variant="primary" className={css.action} disabled={busy} onClick={reauthorize}>{t('reauthorize')}</Button>}
+    </div>}
     <div className={css.actions}><Button variant="outline" className={css.action} disabled={busy}
       onClick={() => { void leave() }}>{busy ? <IconLoadingOutlineRegular className={css.spinner} /> : t('signOut')}</Button></div>
   </section>

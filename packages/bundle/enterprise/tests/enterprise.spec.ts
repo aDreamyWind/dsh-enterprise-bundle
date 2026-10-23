@@ -52,6 +52,12 @@ it('declares the enterprise OIDC and gateway rows through a parseable bundle pat
       redirectMode: { __jsExpr: "ctx.get('profileContext')?.name === 'desktop' ? 'loopback-random-port' : 'fixed'" },
     },
   })
+  expect(rows.find(row => row.id === 'enterprise-account')?.config?.scopes).toEqual(
+    ['openid', 'profile', 'model.invoke', 'mcp.invoke', 'offline_access'],
+  )
+  expect(rows.find(row => row.id === 'mcp-enterprise-connections')).toMatchObject({
+    name: '@deepseek-ai/dsh-mcp-enterprise-connections',
+  })
   expect(rows.find(row => row.id === 'llm-enterprise-gateway')).toMatchObject({
     name: '@deepseek-ai/dsh-llm-enterprise-gateway',
     config: {

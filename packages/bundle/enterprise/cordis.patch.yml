@@ -48,6 +48,14 @@
         redirectUri: !!js "ctx.get('profileContext')?.name === 'desktop' ? 'http://127.0.0.1/oauth/callback' : process.env.HARNESS_ADMIN_WEB_OIDC_REDIRECT_URI"
         redirectMode: !!js "ctx.get('profileContext')?.name === 'desktop' ? 'loopback-random-port' : 'fixed'"
         gatewayOrigin: !!js new URL(process.env.DSH_ENTERPRISE_GATEWAY_BASE_URL ?? process.env.HARNESS_ADMIN_GATEWAY_BASE_URL).origin
+        mcpOrigin: !!js "(process.env.DSH_ENTERPRISE_OIDC_ISSUER ?? process.env.HARNESS_ADMIN_OIDC_ISSUER) ? new URL(process.env.DSH_ENTERPRISE_OIDC_ISSUER ?? process.env.HARNESS_ADMIN_OIDC_ISSUER).origin : undefined"
+        scopes: ['openid', 'profile', 'model.invoke', 'mcp.invoke', 'offline_access']
+        allowLoopbackHttp: !!js process.env.DSH_ENTERPRISE_ALLOW_LOOPBACK_HTTP === 'true'
+
+    - id: mcp-enterprise-connections
+      name: '@deepseek-ai/dsh-mcp-enterprise-connections'
+      config:
+        directoryUrl: !!js "(process.env.DSH_ENTERPRISE_OIDC_ISSUER ?? process.env.HARNESS_ADMIN_OIDC_ISSUER) ? new URL('/api/v1/mcp/connections', process.env.DSH_ENTERPRISE_OIDC_ISSUER ?? process.env.HARNESS_ADMIN_OIDC_ISSUER).href : undefined"
         allowLoopbackHttp: !!js process.env.DSH_ENTERPRISE_ALLOW_LOOPBACK_HTTP === 'true'
 
     - id: llm-enterprise-gateway

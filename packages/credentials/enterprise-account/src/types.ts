@@ -30,6 +30,8 @@ export interface EnterpriseAccountProfile {
 /** Complete enterprise account state projected to browser clients. */
 export interface EnterpriseAccountView {
   readonly status: 'signed-out' | 'signed-in'
+  /** A stored login predates newly required deployment scopes and needs fresh consent; absent means no prompt. */
+  readonly reauthorizationRequired?: boolean
   readonly profile: EnterpriseAccountProfile | null
   readonly attempt: EnterpriseSignInAttemptView | null
 }

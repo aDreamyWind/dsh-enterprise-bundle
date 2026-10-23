@@ -4,7 +4,7 @@ English | [中文](README.zh.md)
 
 ## Usage
 
-An external bundle supplies enterprise login, gateway routing, model discovery, default-model policy, and model selection. The upstream default-model service, Session API, model selector, Remote aggregate, and profile templates require no enterprise source patches. `packages.json` lists the enterprise-owned source directories.
+An external bundle supplies enterprise login, gateway routing, model discovery, default-model policy, model selection, and employee MCP tool connections. The upstream default-model service, Session API, model selector, Remote aggregate, and profile templates require no enterprise source patches. `packages.json` lists the enterprise-owned source directories.
 
 The current source project retains the `pnpm run start:enterprise-web` convenience command. This command is not part of official Harness; a fresh official checkout uses the plugin installation below.
 
