@@ -246,6 +246,7 @@ class EmployeeConnection {
           { signal: execution.signal, timeout: this.toolCallTimeoutMs, toolDefinition: tool }),
       }))
     }
+    const previous = new Set(this.registrations.keys())
     for (const dispose of this.registrations.values()) dispose()
     this.registrations.clear()
     try {
@@ -253,17 +254,27 @@ class EmployeeConnection {
     } catch (error) {
       for (const dispose of this.registrations.values()) dispose()
       this.registrations.clear()
+      for (const name of previous) this.logToolChange('removed', name)
       throw error
     }
+    for (const name of previous) if (!next.has(name)) this.logToolChange('removed', name)
+    for (const name of next.keys()) if (!previous.has(name)) this.logToolChange('mounted', name)
   }
 
   /** Withdraw tools before closing the transport. */
   async close(): Promise<void> {
     if (this.closed) return
     this.closed = true
-    for (const dispose of this.registrations.values()) dispose()
+    for (const [name, dispose] of this.registrations) {
+      dispose()
+      this.logToolChange('removed', name)
+    }
     this.registrations.clear()
     await this.client.close()
+  }
+
+  private logToolChange(action: 'mounted' | 'removed', toolName: string): void {
+    console.info('[enterprise-mcp-tool]', JSON.stringify({ action, code: this.code, toolName }))
   }
 
   private async fetchWithRefresh(input: URL | RequestInfo, init?: RequestInit): Promise<Response> {

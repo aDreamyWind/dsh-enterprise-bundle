@@ -43,6 +43,7 @@ export function apply(ctx: Context, config: Config = Config({})): void {
   ctx.effect(() => ctx.locale.register('enterprise.account', { en, zh }), 'enterprise account: dictionaries')
   const t = ctx.locale.bind('enterprise.account')
   let snapshot: EnterpriseAccountSnapshot = { view: undefined, failed: false }
+  let streamRevision = 0
   const listeners = new Set<() => void>()
   const publish = (value: EnterpriseAccountSnapshot): void => {
     snapshot = value
@@ -57,31 +58,37 @@ export function apply(ctx: Context, config: Config = Config({})): void {
   ctx.effect(() => () => { disposed = true; return stream.dispose() }, 'enterprise account: state stream')
   void (async () => {
     for await (const frame of stream) {
+      streamRevision += 1
       publish({ view: frame.value, failed: false })
       frame.accept()
     }
   })().catch(() => { if (!disposed) publish({ ...snapshot, failed: true }) })
-  const update = (view: EnterpriseAccountView): void => { publish({ view, failed: false }) }
+  const update = (view: EnterpriseAccountView, previousStreamRevision: number): void => {
+    if (streamRevision === previousStreamRevision) publish({ view, failed: false })
+  }
   const face: EnterpriseAccountInjected = {
     hooks: { account: {
       getSnapshot: () => snapshot,
       subscribe: (listener) => { listeners.add(listener); return () => { listeners.delete(listener) } },
     } },
     async start() {
+      const previousStreamRevision = streamRevision
       const result = await waitForStart(ctx.remote.enterpriseAccount.startSignIn(), config.startTimeoutMs as number)
       if (!result.ok) throw result.error
-      update(result.value)
+      update(result.value, previousStreamRevision)
       return result.value
     },
     async cancel(id) {
+      const previousStreamRevision = streamRevision
       const result = await ctx.remote.enterpriseAccount.cancelSignIn(id)
       if (!result.ok) throw result.error
-      update(result.value)
+      update(result.value, previousStreamRevision)
     },
     async signOut() {
+      const previousStreamRevision = streamRevision
       const result = await ctx.remote.enterpriseAccount.signOut()
       if (!result.ok) throw result.error
-      update(result.value)
+      update(result.value, previousStreamRevision)
     },
   }
   ctx.slots.inject('shell.overlay', () => ctx.slots.register({

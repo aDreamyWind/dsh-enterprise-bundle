@@ -46,6 +46,8 @@ it('opens a placeholder on the first click and navigates it as soon as the autho
   rendered.rerender(gate({ ...signedOut, attempt: { id, phase: 'waiting-browser', authorizeUrl } }, start))
   await waitFor(() => { expect(replace).toHaveBeenCalledExactlyOnceWith(authorizeUrl) })
   expect(screen.queryByRole('button', { name: zh.open })).toBeNull()
+  rendered.rerender(gate({ status: 'signed-in', attempt: null, profile: null }, start))
+  await waitFor(() => { expect(popup.close).toHaveBeenCalledOnce() })
 })
 
 it('shows the second button only when the browser blocks the first-click popup', async () => {
@@ -95,6 +97,8 @@ it('offers a new consent attempt while keeping the signed-in settings visible', 
   const authorizeUrl = 'https://admin.example.test/api/v1/oauth2/authorize?state=consent'
   rendered.rerender(section({ ...base, attempt: { id, phase: 'waiting-browser', authorizeUrl } }))
   await waitFor(() => { expect(replace).toHaveBeenCalledExactlyOnceWith(authorizeUrl) })
+  rendered.rerender(section({ ...base, reauthorizationRequired: false, attempt: null }))
+  await waitFor(() => { expect(popup.close).toHaveBeenCalledOnce() })
 })
 
 it('closes a stalled consent popup and ignores the old attempt when a retry starts', async () => {

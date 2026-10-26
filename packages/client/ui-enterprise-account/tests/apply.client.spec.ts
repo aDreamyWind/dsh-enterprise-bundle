@@ -5,7 +5,7 @@ import { resolve } from 'node:path'
 import { expect, vi } from 'vitest'
 import { ok, openStream } from '@deepseek-ai/dsh-remote-mock'
 import { ClientRoster, createClientTest, webApp } from '@deepseek-ai/dsh-client-test-runtime/src/assembly/index.ts'
-import type { EnterpriseAccountView } from '@deepseek-ai/dsh-enterprise-account/types'
+import type { EnterpriseAccountView, EnterpriseSignInAttemptId } from '@deepseek-ai/dsh-enterprise-account/types'
 import type {} from '@deepseek-ai/dsh-api-enterprise-account-controller/remote'
 import type { EnterpriseAccountInjected } from '../src/client/EnterpriseAccount.tsx'
 import { EnterpriseLoginGate, EnterpriseAccountSection } from '../src/client/EnterpriseAccount.tsx'
@@ -55,4 +55,28 @@ test('registers the mandatory gate and settings section against one reconnect-sa
   expect(face.hooks.account.getSnapshot().view).toEqual(signedOut)
   expect(listener).toHaveBeenCalled()
   unsubscribe()
+})
+
+test('keeps the newer browser authorization state when the start response arrives later', async ({ mock, remote, start }) => {
+  const response = Promise.withResolvers<ReturnType<typeof ok<EnterpriseAccountView>>>()
+  const attemptId = 'attempt-1' as EnterpriseSignInAttemptId
+  const initializing: EnterpriseAccountView = {
+    ...signedOut, attempt: { id: attemptId, phase: 'initializing' },
+  }
+  const waiting: EnterpriseAccountView = {
+    ...signedOut, attempt: { id: attemptId, phase: 'waiting-browser', authorizeUrl: 'https://admin.example.test/authorize' },
+  }
+  mock.stream('enterpriseAccount/watch', openStream([signedOut]))
+  mock.unary('enterpriseAccount/startSignIn', () => response.promise)
+  const client = await start()
+  await mock.streams.drained('enterpriseAccount/watch')
+  const overlay = client.ctx.slots.entries('shell.overlay').find(entry => entry.component === EnterpriseLoginGate)
+  const face = overlay!.inject!() as object as EnterpriseAccountInjected
+  const starting = face.start()
+  await vi.waitFor(() => { expect(remote.enterpriseAccount.startSignIn).toHaveBeenCalledExactlyOnceWith() })
+  mock.streams.push('enterpriseAccount/watch', waiting)
+  await vi.waitFor(() => { expect(face.hooks.account.getSnapshot().view).toEqual(waiting) })
+  response.resolve(ok(initializing))
+  expect(await starting).toEqual(initializing)
+  expect(face.hooks.account.getSnapshot().view).toEqual(waiting)
 })

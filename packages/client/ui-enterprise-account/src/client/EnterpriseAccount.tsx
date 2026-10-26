@@ -52,7 +52,6 @@ export function EnterpriseLoginGate({ useAccount, start, cancel, t }: PropsRunti
     if (hasStarted && requestedAttemptId !== attempt.id) return
     openedAttempt.current = attempt.id
     const popup = pendingWindow.current
-    pendingWindow.current = null
     if (popup !== null && !popup.closed) {
       popup.opener = null
       popup.location.replace(authorizeUrl)
@@ -150,7 +149,6 @@ export function EnterpriseAccountSection({ useAccount, start, signOut, t }: Prop
     if (hasStarted && requestedAttemptId !== attempt.id) return
     openedAttempt.current = attempt.id
     const popup = pendingWindow.current
-    pendingWindow.current = null
     if (popup !== null && !popup.closed) { popup.opener = null; popup.location.replace(authorizeUrl); return }
     if (window.location.protocol === 'dsh:') { window.open(authorizeUrl, '_blank', 'noopener,noreferrer'); return }
     setPopupBlocked(true)

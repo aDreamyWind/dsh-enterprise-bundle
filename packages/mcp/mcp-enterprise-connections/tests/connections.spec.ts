@@ -8,7 +8,7 @@ import ToolRuntime from '@deepseek-ai/dsh-tools'
 import { createMcpHandler, McpServer } from '@modelcontextprotocol/server'
 import { toNodeHandler, type NodeIncomingMessageLike } from '@modelcontextprotocol/node'
 import { z } from 'zod'
-import { expect, it } from 'vitest'
+import { expect, it, vi } from 'vitest'
 import { EnterpriseMcpSupervisor, serverNameFor } from '../src/index.ts'
 
 class Account extends EnterpriseAccount {
@@ -78,6 +78,7 @@ it('loads employee tools, refreshes the exact rejected bearer and removes revoke
   if (address === null || typeof address === 'string') throw new Error('fixture server did not bind')
   origin = `http://127.0.0.1:${address.port}`
   const ctx = new Context()
+  const info = vi.spyOn(console, 'info').mockImplementation(() => {})
   let supervisor: EnterpriseMcpSupervisor | undefined
   try {
     await ctx.plugin(SystemPrompt)
@@ -94,6 +95,10 @@ it('loads employee tools, refreshes the exact rejected bearer and removes revoke
     const toolName = `mcp__${serverNameFor(code)}__ping`
     expect(serverNameFor(code)).toHaveLength(32)
     expect(ctx.tools.get(toolName)).toBeDefined()
+    expect(info).toHaveBeenCalledExactlyOnceWith('[enterprise-mcp-tool]',
+      JSON.stringify({ action: 'mounted', code, toolName }))
+    await supervisor.refresh()
+    expect(info).toHaveBeenCalledTimes(1)
     rejectOldToken = true
     const result = await ctx.tools.execute({ name: toolName, callId: ToolCallId('employee-ping'),
       arguments: {}, signal: new AbortController().signal })
@@ -104,8 +109,17 @@ it('loads employee tools, refreshes the exact rejected bearer and removes revoke
     allowed = false
     await supervisor.refresh()
     expect(ctx.tools.get(toolName)).toBeUndefined()
+    expect(info).toHaveBeenLastCalledWith('[enterprise-mcp-tool]',
+      JSON.stringify({ action: 'removed', code, toolName }))
+    allowed = true
+    await supervisor.refresh()
+    expect(ctx.tools.get(toolName)).toBeDefined()
+    expect(info).toHaveBeenLastCalledWith('[enterprise-mcp-tool]',
+      JSON.stringify({ action: 'mounted', code, toolName }))
+    expect(info).toHaveBeenCalledTimes(3)
   } finally {
     await supervisor?.close()
+    info.mockRestore()
     await ctx.fiber.dispose()
     await handler.close()
     await new Promise<void>(resolve => { server.close(() => resolve()); server.closeAllConnections() })
