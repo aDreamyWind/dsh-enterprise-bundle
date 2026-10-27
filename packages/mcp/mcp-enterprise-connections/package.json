@@ -26,7 +26,10 @@
     "@deepseek-ai/dsh-agent": "workspace:*",
     "@deepseek-ai/dsh-enterprise-account": "workspace:*",
     "@deepseek-ai/dsh-tools": "workspace:*",
-    "@deepseek-ai/dsh-mcp-client": "workspace:*"
+    "@deepseek-ai/dsh-mcp-client": "workspace:*",
+    "@deepseek-ai/dsh-mcp-resources": "workspace:*",
+    "@deepseek-ai/dsh-skill": "workspace:*",
+    "@deepseek-ai/dsh-util-values": "workspace:*"
   },
   "devDependencies": {
     "@deepseek-ai/cordis": "workspace:~",
@@ -34,6 +37,9 @@
     "@deepseek-ai/dsh-enterprise-account": "workspace:*",
     "@deepseek-ai/dsh-tools": "workspace:*",
     "@deepseek-ai/dsh-mcp-client": "workspace:*",
+    "@deepseek-ai/dsh-mcp-resources": "workspace:*",
+    "@deepseek-ai/dsh-skill": "workspace:*",
+    "@deepseek-ai/dsh-util-values": "workspace:*",
     "vitest": "^4.1.0",
     "@deepseek-ai/dsh-llm": "workspace:*",
     "@deepseek-ai/dsh-system-prompt": "workspace:*",

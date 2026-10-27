@@ -9,6 +9,9 @@
     { "path": "../../core/agent" },
     { "path": "../../core/tools" },
     { "path": "../../credentials/enterprise-account" },
-    { "path": "../mcp-client" }
+    { "path": "../mcp-client" },
+    { "path": "../mcp-resources" },
+    { "path": "../../skill/skill" },
+    { "path": "../../util/values" }
   ]
 }

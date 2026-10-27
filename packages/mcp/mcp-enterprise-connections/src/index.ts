@@ -4,10 +4,16 @@ import type { Context } from '@deepseek-ai/cordis'
 import type {} from '@deepseek-ai/dsh-agent'
 import type {} from '@deepseek-ai/dsh-enterprise-account'
 import type {} from '@deepseek-ai/dsh-tools'
+import { defineTool } from '@deepseek-ai/dsh-tools'
+import type {} from '@deepseek-ai/dsh-mcp-resources'
+import type {} from '@deepseek-ai/dsh-skill'
+import type { JsonValue } from '@deepseek-ai/dsh-util-values'
 import { createMcpToolDefinition } from '@deepseek-ai/dsh-mcp-client'
 import { Client, StreamableHTTPClientTransport } from '@modelcontextprotocol/client'
 import Schema from '@deepseek-ai/schemastery'
 import { z } from 'zod'
+import { registerEnterpriseSkills } from './skills.ts'
+import { registerUpstreamSkills } from './upstream-skills.ts'
 
 const REQUIRED_SCOPES = ['mcp.invoke'] as const
 const connectionSchema = z.object({
@@ -36,7 +42,7 @@ export const Config = Schema.object({
 })
 
 export const name = 'mcp-enterprise-connections'
-export const inject = ['enterpriseAccount', 'tools']
+export const inject = ['enterpriseAccount', 'tools', 'mcpResources', 'skills']
 
 /** Stable, valid MCP namespace for an opaque Admin connection code. */
 export function serverNameFor(code: string): string {
@@ -48,11 +54,13 @@ export function apply(ctx: Context, config: Config): void {
   const resolved = Config(config)
   const directoryUrl = validateDirectoryURL(resolved.directoryUrl, resolved.allowLoopbackHttp)
   const supervisor = new EnterpriseMcpSupervisor(ctx, directoryUrl, resolved)
+  const skills = registerEnterpriseSkills(ctx, directoryUrl, resolved)
   ctx.on('agent/pre-step', async (_payload, next) => {
     await supervisor.refreshSafely()
+    skills.invalidate()
     return next()
   })
-  ctx.effect(() => () => supervisor.close(), 'enterprise MCP connections')
+  ctx.effect(() => () => { skills.dispose(); return supervisor.close() }, 'enterprise MCP connections')
   supervisor.start()
 }
 
@@ -204,6 +212,9 @@ export class EnterpriseMcpSupervisor {
 /** One authenticated SDK connection and its registered tool generation. */
 class EmployeeConnection {
   private readonly registrations = new Map<string, () => void>()
+  private resourceRegistration: (() => void) | undefined
+  private readonly promptRegistrations: (() => void)[] = []
+  private upstreamSkills: ReturnType<typeof registerUpstreamSkills> | undefined
   private closed = false
 
   private constructor(
@@ -259,6 +270,62 @@ class EmployeeConnection {
     }
     for (const name of previous) if (!next.has(name)) this.logToolChange('removed', name)
     for (const name of next.keys()) if (!previous.has(name)) this.logToolChange('mounted', name)
+    this.syncResourcesAndPrompts()
+    const capabilities = this.client.getServerCapabilities()
+    const extensions = capabilities?.extensions as Record<string, unknown> | undefined
+    if (Object.hasOwn(extensions ?? {}, 'io.modelcontextprotocol/skills')) {
+      this.upstreamSkills ??= registerUpstreamSkills(this.ctx, this.client, serverNameFor(this.code), this.toolCallTimeoutMs)
+      this.upstreamSkills.invalidate()
+    } else {
+      this.upstreamSkills?.dispose()
+      this.upstreamSkills = undefined
+    }
+  }
+
+  private syncResourcesAndPrompts(): void {
+    const capabilities = this.client.getServerCapabilities()
+    if (capabilities?.resources !== undefined && this.resourceRegistration === undefined) {
+      this.resourceRegistration = this.ctx.mcpResources.register(serverNameFor(this.code), {
+        request: async (request, execution) => {
+          const options = { signal: execution.signal, timeout: this.toolCallTimeoutMs }
+          switch (request.method) {
+            case 'resources/list': return toJson(await this.client.listResources(
+              request.cursor === undefined ? undefined : { cursor: request.cursor }, options))
+            case 'resources/templates/list': return toJson(await this.client.listResourceTemplates(
+              request.cursor === undefined ? undefined : { cursor: request.cursor }, options))
+            case 'resources/read': return toJson(await this.client.readResource({ uri: request.uri }, options))
+          }
+        },
+      })
+    }
+    if (capabilities?.prompts !== undefined && this.promptRegistrations.length === 0) {
+      const server = serverNameFor(this.code)
+      const output = { schema: { type: 'json' } as const,
+        render: (_args: unknown, value: unknown) => [{ type: 'text' as const, text: JSON.stringify(value) }] }
+      this.promptRegistrations.push(this.ctx.tools.register(defineTool({
+        name: `mcp_prompt__${server}__list`,
+        description: 'List prompt templates from this employee-authorized MCP server.',
+        parameters: { cursor: { type: 'string', description: 'Continuation cursor.' } }, output,
+        execute: async (args, execution) => toJson(await this.client.listPrompts(
+          args.cursor === undefined ? undefined : { cursor: args.cursor },
+          { signal: execution.signal, timeout: this.toolCallTimeoutMs })),
+      })))
+      this.promptRegistrations.push(this.ctx.tools.register(defineTool({
+        name: `mcp_prompt__${server}__get`,
+        description: 'Get a prompt template by name from this employee-authorized MCP server.',
+        parameters: { name: { type: 'string', required: true, description: 'Prompt name.' },
+          arguments: { type: 'object', additionalProperties: true, description: 'String prompt argument values.' } }, output,
+        execute: async (args, execution) => {
+          const values = args.arguments
+          if (values !== undefined && Object.values(values).some(value => typeof value !== 'string')) {
+            throw new Error('MCP prompt arguments must be strings')
+          }
+          return toJson(await this.client.getPrompt(
+            { name: args.name, arguments: values as Record<string, string> | undefined },
+            { signal: execution.signal, timeout: this.toolCallTimeoutMs }))
+        },
+      })))
+    }
   }
 
   /** Withdraw tools before closing the transport. */
@@ -270,6 +337,12 @@ class EmployeeConnection {
       this.logToolChange('removed', name)
     }
     this.registrations.clear()
+    this.resourceRegistration?.()
+    this.resourceRegistration = undefined
+    for (const dispose of this.promptRegistrations) dispose()
+    this.promptRegistrations.length = 0
+    this.upstreamSkills?.dispose()
+    this.upstreamSkills = undefined
     await this.client.close()
   }
 
@@ -338,4 +411,8 @@ async function readBoundedBody(response: Response, maxBytes: number): Promise<st
   let offset = 0
   for (const chunk of chunks) { body.set(chunk, offset); offset += chunk.byteLength }
   return new TextDecoder().decode(body)
+}
+
+function toJson(value: unknown): JsonValue {
+  return JSON.parse(JSON.stringify(value)) as JsonValue
 }
