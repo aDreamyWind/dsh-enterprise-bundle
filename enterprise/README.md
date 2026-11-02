@@ -4,21 +4,19 @@ English | [中文](README.zh.md)
 
 ## Usage
 
-An external bundle supplies enterprise login, gateway routing, model discovery, default-model policy, model selection, and employee MCP tool connections. The upstream default-model service, Session API, model selector, Remote aggregate, and profile templates require no enterprise source patches. `packages.json` lists the enterprise-owned source directories.
+An external bundle supplies enterprise login, gateway routing, model discovery, default-model policy, model selection, and employee MCP tool connections. Enterprise login and gateway routing do not rewrite upstream default-model services, Session APIs, model selectors, or profile templates. Immediate enterprise Skill menu updates require the Host to forward `skills/change` and the official skill UI to clear its cache on that event; the integration branch supplies this general fix. `packages.json` lists the enterprise-owned source directories.
 
-The current source project retains the `pnpm run start:enterprise-web` convenience command. This command is not part of official Harness; a fresh official checkout uses the plugin installation below.
+The plugin targets Harness `0.2.2-alpha.2`, as declared in `compatibility.json`. The independent repository builds with the command below; `pnpm run start:enterprise-web` belongs to the older fork.
 
-### Build a release from the current project
+### Build and verify an archive
+
+Run `pnpm install` in a compatible official Harness checkout, then run from this plugin repository:
 
 ```sh
-pnpm run build
-pnpm run pack:enterprise
-pnpm run export:enterprise
+node enterprise/build.mjs --harness /absolute/path/to/official-harness --ref HEAD --verify
 ```
 
-Packing prints the absolute `.tgz` path; adjacent `compatibility.json` records the corresponding Harness version. One archive contains the enterprise bundle and every enterprise child plugin, without publishing those children separately to npm. Harness still provides its official runtime libraries; do not delete or replace them.
-
-Export prints a detached source directory. Copy that complete directory into a separate plugin repository and maintain its enterprise sources and tools there. The export allowlist excludes `.env`, user credentials, Session data, `node_modules`, and official sources.
+`--verify` builds artifacts, checks test types, and runs the focused enterprise tests inside a temporary SDK copy. The build borrows installed third-party dependencies from the official checkout and resolves every workspace package inside the copy. The command prints the archive path; adjacent `compatibility.json` records the Harness version. One archive contains the enterprise bundle and all enterprise child plugins. Harness continues to provide its official runtime libraries.
 
 ### Install into official Web
 

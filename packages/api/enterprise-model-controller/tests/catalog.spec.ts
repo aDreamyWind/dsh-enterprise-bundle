@@ -1,7 +1,7 @@
 /** The enterprise catalog samples availability without replacing ordinary Session operations. */
 import { Context } from '@deepseek-ai/cordis'
 import EnterpriseDefaultModel from '@deepseek-ai/dsh-agent-enterprise-default-model'
-import { buildModelCatalog } from '@deepseek-ai/dsh-api-session-controller'
+import { buildModelCatalog } from '@deepseek-ai/dsh-api-session-controller/src/catalog.ts'
 import LlmRuntime, { LlmAdapter } from '@deepseek-ai/dsh-llm'
 import { remoteMethods } from '@deepseek-ai/dsh-typert-protocol'
 import { expect, it, onTestFinished } from 'vitest'

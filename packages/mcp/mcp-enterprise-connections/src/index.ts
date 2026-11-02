@@ -1,5 +1,6 @@
 /** Employee-scoped Harness Admin MCP directory and Host-only tool connections. */
 import { createHash } from 'node:crypto'
+import { isDeepStrictEqual } from 'node:util'
 import type { Context } from '@deepseek-ai/cordis'
 import type {} from '@deepseek-ai/dsh-agent'
 import type {} from '@deepseek-ai/dsh-enterprise-account'
@@ -209,9 +210,11 @@ export class EnterpriseMcpSupervisor {
   }
 }
 
+type DiscoveredTool = Awaited<ReturnType<Client['listTools']>>['tools'][number]
+
 /** One authenticated SDK connection and its registered tool generation. */
 class EmployeeConnection {
-  private readonly registrations = new Map<string, () => void>()
+  private readonly registrations = new Map<string, { tool: DiscoveredTool; dispose: () => void }>()
   private resourceRegistration: (() => void) | undefined
   private readonly promptRegistrations: (() => void)[] = []
   private upstreamSkills: ReturnType<typeof registerUpstreamSkills> | undefined
@@ -241,35 +244,44 @@ class EmployeeConnection {
     catch (error) { await client.close(); throw error }
   }
 
-  /** Replace a full tool generation after successful SDK discovery. */
+  /** Reconcile discovered tools while preserving unchanged registrations for admitted calls. */
   async sync(): Promise<void> {
     if (this.closed) return
     const listed = this.client.getServerCapabilities()?.tools === undefined
       ? { tools: [] } : await this.client.listTools(undefined, { cacheMode: 'refresh' })
-    const next = new Map<string, ReturnType<typeof createMcpToolDefinition>>()
+    const next = new Map<string, DiscoveredTool>()
     for (const tool of listed.tools) {
       const name = toolName(serverNameFor(this.code), tool.name)
       if (next.has(name)) throw new Error(`employee MCP server ${this.code} repeats a tool`)
-      next.set(name, createMcpToolDefinition(this.ctx, {
-        name, rawName: tool.name, description: tool.description ?? '', inputSchema: tool.inputSchema,
-        outputSchema: tool.outputSchema, taskRequired: tool.execution?.taskSupport === 'required',
-        call: (args, execution) => this.client.callTool({ name: tool.name, arguments: args },
-          { signal: execution.signal, timeout: this.toolCallTimeoutMs, toolDefinition: tool }),
-      }))
+      next.set(name, tool)
     }
-    const previous = new Set(this.registrations.keys())
-    for (const dispose of this.registrations.values()) dispose()
-    this.registrations.clear()
+    // Step admission retains registration identity until execution finishes.
+    for (const [name, registration] of this.registrations) {
+      if (isDeepStrictEqual(registration.tool, next.get(name))) continue
+      registration.dispose()
+      this.registrations.delete(name)
+      this.logToolChange('removed', name)
+    }
     try {
-      for (const [name, definition] of next) this.registrations.set(name, this.ctx.tools.register(definition))
+      for (const [name, tool] of next) {
+        if (this.registrations.has(name)) continue
+        const definition = createMcpToolDefinition(this.ctx, {
+          name, rawName: tool.name, description: tool.description ?? '', inputSchema: tool.inputSchema,
+          outputSchema: tool.outputSchema, taskRequired: tool.execution?.taskSupport === 'required',
+          call: (args, execution) => this.client.callTool({ name: tool.name, arguments: args },
+            { signal: execution.signal, timeout: this.toolCallTimeoutMs, toolDefinition: tool }),
+        })
+        this.registrations.set(name, { tool, dispose: this.ctx.tools.register(definition) })
+        this.logToolChange('mounted', name)
+      }
     } catch (error) {
-      for (const dispose of this.registrations.values()) dispose()
+      for (const [name, registration] of this.registrations) {
+        registration.dispose()
+        this.logToolChange('removed', name)
+      }
       this.registrations.clear()
-      for (const name of previous) this.logToolChange('removed', name)
       throw error
     }
-    for (const name of previous) if (!next.has(name)) this.logToolChange('removed', name)
-    for (const name of next.keys()) if (!previous.has(name)) this.logToolChange('mounted', name)
     this.syncResourcesAndPrompts()
     const capabilities = this.client.getServerCapabilities()
     const extensions = capabilities?.extensions as Record<string, unknown> | undefined
@@ -332,8 +344,8 @@ class EmployeeConnection {
   async close(): Promise<void> {
     if (this.closed) return
     this.closed = true
-    for (const [name, dispose] of this.registrations) {
-      dispose()
+    for (const [name, registration] of this.registrations) {
+      registration.dispose()
       this.logToolChange('removed', name)
     }
     this.registrations.clear()

@@ -8,6 +8,7 @@
  * (and the reverse), the one-shared-state contract of the dual entry.
  * Scope disposal drops the directory (HMR safety).
  */
+import { ReasoningEffortId } from '@deepseek-ai/dsh-llm'
 import { Context } from '@deepseek-ai/cordis'
 import { describe, expect, it, vi } from 'vitest'
 import { createScope } from '@deepseek-ai/dsh-api-session-controller/client'
@@ -15,7 +16,8 @@ import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import { LocaleRuntime } from '@deepseek-ai/dsh-client-locale/client'
 import { createSnapshotStore, type SnapshotStore } from '@deepseek-ai/dsh-client-store'
 import { RemoteError, TestRemote } from '@deepseek-ai/dsh-client-test-runtime'
-import type { ModelSelection, ModelSelectionProjection } from '@deepseek-ai/dsh-api-session-controller/types'
+import type { ModelSelectionProjection } from '@deepseek-ai/dsh-agent/types'
+import type { ModelSelection } from '@deepseek-ai/dsh-api-session-controller/types'
 import type { CommandContribution, PopupSelectSpec, SelectOption } from '@deepseek-ai/dsh-client-ui-commands/client'
 import type { ModelSelectInjected } from '../src/client/slots.ts'
 import { apply, inject } from '../src/client/selector.ts'
@@ -100,7 +102,7 @@ async function bench(locale: 'zh' | 'en' = 'zh') {
           ? {}
           : { reasoningEffort: payload.reasoningEffort },
       }
-      projections.get(payload.sessionId)?.set({ lastUsed: null, next: selected })
+      projections.get(payload.sessionId)?.set({ lastUsed: null, next: { provider: selected.provider, model: selected.model, ...selected.reasoningEffort === undefined ? {} : { reasoningEffort: ReasoningEffortId(selected.reasoningEffort) } } })
       return Promise.resolve({ ok: true as const, value: { selected } })
     },
   }
@@ -452,7 +454,7 @@ describe('ui-enterprise-model-selection dual entry', () => {
       const existing = b.ctx.enterpriseModelDirectories.directoryFor(sid('existing'))
       await existing.load()
       b.setProjected(sid('existing'), { lastUsed: null,
-        next: { provider: 'deepseek-official', model: 'deepseek-v4-flash', reasoningEffort: 'high' } })
+        next: { provider: 'deepseek-official', model: 'deepseek-v4-flash', reasoningEffort: ReasoningEffortId('high') } })
       b.setRoutable(false)
       b.remote.emit('settings/document-updated', ['llm-deepseek', 1])
       expect(existing.store.getSnapshot().retainedEffort).toBe('High')

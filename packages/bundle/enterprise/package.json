@@ -1,7 +1,7 @@
 {
   "name": "@deepseek-ai/dsh-enterprise-bundle",
   "description": "Harness Admin OIDC and model-gateway layer for enterprise Web and Desktop distributions",
-  "version": "0.2.1-alpha.4",
+  "version": "0.2.2-alpha.2",
   "publishConfig": {
     "access": "public"
   },

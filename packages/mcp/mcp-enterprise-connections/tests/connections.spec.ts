@@ -1,10 +1,15 @@
 /** Employee directory, bearer rotation and MCP tool lifecycle over real HTTP. */
 import { createServer } from 'node:http'
+import type { Agent } from '@deepseek-ai/dsh-agent'
+import { createScope } from '@deepseek-ai/dsh-scope'
+import { SessionId } from '@deepseek-ai/dsh-session'
 import { Context } from '@deepseek-ai/cordis'
 import { EnterpriseAccount, type EnterpriseAccountView, type EnterpriseSignInAttemptId } from '@deepseek-ai/dsh-enterprise-account'
 import { ToolCallId } from '@deepseek-ai/dsh-llm'
 import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
 import ToolRuntime from '@deepseek-ai/dsh-tools'
+import { executeModelToolFixture } from '@deepseek-ai/dsh-tool-testkit'
+import * as NativeToolExecutor from '@deepseek-ai/dsh-tool-executor-native'
 import McpResourceRuntime from '@deepseek-ai/dsh-mcp-resources'
 import SkillRegistry from '@deepseek-ai/dsh-skill'
 import { createMcpHandler, McpServer } from '@modelcontextprotocol/server'
@@ -101,6 +106,7 @@ it('loads employee tools, refreshes the exact rejected bearer and removes revoke
   try {
     await ctx.plugin(SystemPrompt)
     await ctx.plugin(ToolRuntime)
+    await ctx.plugin(NativeToolExecutor)
     await ctx.plugin(McpResourceRuntime)
     await ctx.plugin(SkillRegistry)
     await ctx.plugin(Account)
@@ -124,24 +130,38 @@ it('loads employee tools, refreshes the exact rejected bearer and removes revoke
     expect((await ctx.skills.get('upstream-skill'))?.content).toBe('# Upstream skill\n')
     expect(info).toHaveBeenCalledExactlyOnceWith('[enterprise-mcp-tool]',
       JSON.stringify({ action: 'mounted', code, toolName }))
-    await supervisor.refresh()
+    const agent = { id: SessionId('enterprise-admission') } as Agent
+    await ctx.plugin({ inject: ['tools'], apply(inner: Context) { createScope(inner, agent) } })
+    const toolSet = await ctx.tools.resolve({
+      agent, modelSelection: { provider: 'enterprise', model: 'fixture' }, signal: new AbortController().signal,
+    })
+    try {
+      await supervisor.refresh()
+      expect(ctx.tools.schemas(agent, toolSet).some(tool => tool.name === toolName)).toBe(true)
+      const admitted = await executeModelToolFixture(ctx, {
+        agent, toolSet, name: toolName, callId: ToolCallId('admitted-ping'), arguments: {},
+        signal: new AbortController().signal,
+      })
+      expect(admitted.isError).toBe(false)
+      expect(admitted.value).toMatchObject({ content: [{ type: 'text', text: 'pong' }] })
+    } finally { toolSet.dispose() }
     expect(info).toHaveBeenCalledTimes(1)
     rejectOldToken = true
-    const result = await ctx.tools.execute({ name: toolName, callId: ToolCallId('employee-ping'),
+    const result = await executeModelToolFixture(ctx, { name: toolName, callId: ToolCallId('employee-ping'),
       arguments: {}, signal: new AbortController().signal })
     expect(result.isError).toBe(false)
     expect(result.value).toMatchObject({ content: [{ type: 'text', text: 'pong' }] })
     expect(account.refreshes).toBe(1)
     expect(seenTokens).toContain('Bearer employee-b')
-    const resource = await ctx.tools.execute({ name: 'read_mcp_resource', callId: ToolCallId('employee-resource'),
+    const resource = await executeModelToolFixture(ctx, { name: 'read_mcp_resource', callId: ToolCallId('employee-resource'),
       arguments: { server: serverNameFor(code), uri: 'memo://employee' }, signal: new AbortController().signal })
     expect(resource.isError).toBe(false)
     expect(resource.value).toMatchObject({ contents: [{ text: 'employee-only memo' }] })
-    const prompts = await ctx.tools.execute({ name: promptList, callId: ToolCallId('employee-prompts'),
+    const prompts = await executeModelToolFixture(ctx, { name: promptList, callId: ToolCallId('employee-prompts'),
       arguments: {}, signal: new AbortController().signal })
     expect(prompts.isError).toBe(false)
     expect(prompts.value).toMatchObject({ prompts: [{ name: 'plan' }] })
-    const prompt = await ctx.tools.execute({ name: promptGet, callId: ToolCallId('employee-prompt'),
+    const prompt = await executeModelToolFixture(ctx, { name: promptGet, callId: ToolCallId('employee-prompt'),
       arguments: { name: 'plan', arguments: { topic: 'lunch' } }, signal: new AbortController().signal })
     expect(prompt.isError).toBe(false)
     expect(prompt.value).toMatchObject({ messages: [{ content: { text: 'Plan lunch' } }] })
@@ -204,6 +224,7 @@ it('loads a published employee Skill and withdraws it after publication or grant
   try {
     await ctx.plugin(SystemPrompt)
     await ctx.plugin(ToolRuntime)
+    await ctx.plugin(NativeToolExecutor)
     await ctx.plugin(McpResourceRuntime)
     await ctx.plugin(SkillRegistry)
     await ctx.plugin(Account)
@@ -212,7 +233,7 @@ it('loads a published employee Skill and withdraws it after publication or grant
       { requestTimeoutMs: 5_000, maxDirectoryBytes: 65_536, toolCallTimeoutMs: 5_000 })
     expect(await ctx.skills.list()).toMatchObject([{ name: 'example-skill', provider: 'enterprise-admin' }])
     expect((await ctx.skills.get('example-skill'))?.content).toBe('# Enterprise skill\n')
-    const resource = await ctx.tools.execute({ name: 'read_mcp_resource', callId: ToolCallId('skill-resource'),
+    const resource = await executeModelToolFixture(ctx, { name: 'read_mcp_resource', callId: ToolCallId('skill-resource'),
       arguments: { server: 'enterprise-skills', uri: 'skill://enterprise/example-skill/guide.md' },
       signal: new AbortController().signal })
     expect(resource.isError).toBe(false)

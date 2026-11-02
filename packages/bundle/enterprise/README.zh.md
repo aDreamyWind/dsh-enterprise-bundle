@@ -68,7 +68,7 @@ Desktop 安装包不包含 Web client secret。Web secret 只存在于 Web Host 
 - 模型选择器需要带鉴权的 `GET /v1/models`；目录请求失败时不显示静态后备模型。Admin 返回可用模型之前会保留配置的初始默认候选。
 - 网关目前支持 `/v1/chat/completions`，不支持 `/v1/responses`。工具调用、多模态内容与流式工具调用取决于所选上游模型和提供商。
 - 该 patch 生效时，随产品交付的模型路由都会使用 Harness Admin。后置的用户 patch 仍可添加其他适配器，因此要求只走网关的部署不能重新引入直连提供器路由。
-- Harness Admin 负责模型调用与额度策略。企业 MCP 插件从员工目录装载已授权连接，在每次模型步骤前刷新，并通过 Admin 网关调用工具；Skill 分配仍未接入。每个 Web Host 只服务一位员工。
+- Harness Admin 负责模型调用与额度策略。企业 MCP 插件从员工目录装载已授权连接，在每次模型步骤前刷新，并通过 Admin 网关调用工具；企业 Skills 目录与文件访问见[企业 MCP 指南](../../mcp/mcp-enterprise-connections/README.zh.md)。每个 Web Host 只服务一位员工。
 - 安装到官方 Desktop 应用时会保留原生品牌和欢迎页文案；内嵌配置和品牌安装包需要独立的分发构建。
 
 <a id="dev-note"></a>

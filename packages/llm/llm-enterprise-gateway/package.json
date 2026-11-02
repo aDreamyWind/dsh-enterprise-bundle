@@ -1,7 +1,7 @@
 {
   "name": "@deepseek-ai/dsh-llm-enterprise-gateway",
   "description": "Route Harness models through Harness Admin with OIDC bearer tokens",
-  "version": "0.2.1-alpha.4",
+  "version": "0.2.2-alpha.2",
   "publishConfig": {
     "access": "public"
   },

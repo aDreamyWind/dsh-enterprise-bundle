@@ -68,7 +68,7 @@ No model request prefix changes.
 - The model selector requires authenticated `GET /v1/models`; a failed directory request shows no static fallback models. The configured initial default candidate is retained until Admin returns an available model.
 - The gateway currently supports `/v1/chat/completions`, not `/v1/responses`. Tool calls, multimodal content, and streaming tool calls depend on the selected upstream model and provider.
 - The shipped model routes all use Harness Admin while this patch is active. A later user patch can still add another adapter, so deployment owners must not reintroduce direct-provider routes when gateway-only routing is required.
-- Harness Admin enforces model invocation and quota policy. The enterprise MCP plugin mounts the signed-in employee’s authorized connections and refreshes them before each model step; Skill assignment remains separate. Each Web Host serves one employee.
+- Harness Admin enforces model invocation and quota policy. The enterprise MCP plugin mounts the signed-in employee’s authorized connections and refreshes them before each model step; Enterprise Skills discovery and file access are described in the [enterprise MCP guide](../../mcp/mcp-enterprise-connections/README.md). Each Web Host serves one employee.
 - Installing into an official Desktop application retains its native branding and welcome copy; embedded configuration and branded installers require a separate distribution build.
 
 <a id="dev-note"></a>

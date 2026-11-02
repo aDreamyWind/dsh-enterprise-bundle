@@ -8,7 +8,9 @@
     "src"
   ],
   "references": [
-    { "path": "../../api/enterprise-model-controller" },
+    {
+      "path": "../../api/enterprise-model-controller"
+    },
     {
       "path": "../../api/remotes/tsconfig.client.json"
     },
@@ -56,6 +58,9 @@
     },
     {
       "path": "../product-analytics/tsconfig.client.json"
+    },
+    {
+      "path": "../../core/agent"
     }
   ]
 }

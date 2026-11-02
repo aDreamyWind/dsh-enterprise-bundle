@@ -1,5 +1,7 @@
 # @deepseek-ai/dsh-mcp-enterprise-connections
 
+[English](README.md) | 中文
+
 本 Host 插件从 Harness Admin 的 `GET /api/v1/mcp/connections` 读取当前员工获准使用的连接，并通过无状态 Streamable HTTP 网关注册其工具、resources 与 prompts。resources 接入 Host 原有的 `list_mcp_resources`、`list_mcp_resource_templates` 和 `read_mcp_resource`；声明 prompts 能力的连接会增加列举和读取 prompt 的模型工具。
 
 企业 Skills 从 `GET /api/v1/skills/directory` 注册到 Host 的 Skill 目录，按员工授权和当前发布版本加载。Skill 正文通过受保护的文件接口读取；随附文件通过 `enterprise-skills` MCP resource 服务读取。Skill 文件与上游 MCP 返回的内容都属于外部输入，进入模型上下文前应按普通工具结果审阅。Skills 目录在每次 agent step 前失效，授权撤销后再次查询不会继续暴露旧版本。
@@ -11,3 +13,5 @@
 `directoryUrl` 必须为 HTTPS，或显式允许的本机回环 HTTP 地址，且路径固定为 `/api/v1/mcp/connections`。目录返回的网关 URL 必须与目录同源、路径为 `/mcp/{code}`。`serverName` 从连接编码的 SHA-256 摘要稳定派生，满足 Harness 的 32 字符限制。`requestTimeoutMs`、`maxDirectoryBytes` 与 `toolCallTimeoutMs` 可配置。
 
 旧授权缺少 `mcp.invoke` 时，本插件不加载工具。账号设置会提示重新授权；原有模型访问保持可用。目录与连接无法代表跨员工共享 Host 的身份隔离。
+
+未变化的 MCP 工具在目录刷新时保留注册身份，因此新版 Harness 已准入的调用仍可执行；工具删除或声明变化时撤回旧注册。

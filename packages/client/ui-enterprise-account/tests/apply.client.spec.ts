@@ -2,9 +2,10 @@
 /** Enterprise account UI through the production client module graph and Remote carrier. */
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
-import { expect, vi } from 'vitest'
+import { beforeAll, expect, vi } from 'vitest'
 import { ok, openStream } from '@deepseek-ai/dsh-remote-mock'
 import { ClientRoster, createClientTest, webApp } from '@deepseek-ai/dsh-client-test-runtime/src/assembly/index.ts'
+import { loadPluginModules } from '@deepseek-ai/dsh-client-test-runtime/src/assembly/modules.ts'
 import type { EnterpriseAccountView, EnterpriseSignInAttemptId } from '@deepseek-ai/dsh-enterprise-account/types'
 import type {} from '@deepseek-ai/dsh-api-enterprise-account-controller/remote'
 import type { EnterpriseAccountInjected } from '../src/client/EnterpriseAccount.tsx'
@@ -15,12 +16,16 @@ const manifest = JSON.parse(readFileSync(resolve(import.meta.dirname, '../packag
   name: string
   dsh: { client: { inject: string[] } }
 }
-const test = createClientTest({ roster: ClientRoster.of([...webApp.rows, {
+const plan = { roster: ClientRoster.of([...webApp.rows, {
   name: manifest.name, inject: manifest.dsh.client.inject, immediately: false,
 }]), provide: {
   // This tier replaces generated Remote mounts with contract-free transport proxies.
   [manifest.name]: account,
-} })
+} }
+
+// Module transforms belong to suite setup; each test still boots and disposes its own client.
+beforeAll(async () => { await loadPluginModules(plan) })
+const test = createClientTest(plan)
 
 const signedOut: EnterpriseAccountView = { status: 'signed-out', profile: null, attempt: null }
 const signedIn: EnterpriseAccountView = {

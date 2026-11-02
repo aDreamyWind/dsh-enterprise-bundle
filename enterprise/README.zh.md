@@ -4,21 +4,19 @@
 
 ## 使用方式
 
-企业登录、模型网关、动态模型目录、默认模型策略、模型选择器和员工 MCP 工具连接通过外置 bundle 加载。官方的默认模型、Session API、模型选择器、RPC 汇总和 profile 模板不需要企业源码补丁。`packages.json` 列出插件拥有的源文件目录。
+企业登录、模型网关、动态模型目录、默认模型策略、模型选择器和员工 MCP 工具连接通过外置 bundle 加载。企业登录与模型网关不需要改写官方默认模型、Session API、模型选择器或 profile 模板。企业 Skills 的即时菜单刷新要求 Host 转发 `skills/change`，且官方技能 UI 在收到该事件时清理缓存；集成分支提供这项通用修复。`packages.json` 列出插件拥有的源文件目录。
 
-当前源码项目保留 `pnpm run start:enterprise-web` 便捷启动命令。这个命令不是官方 Harness 的命令；全新官方项目使用下面的插件安装方式。
+当前插件面向 `compatibility.json` 声明的 Harness `0.2.2-alpha.2`。独立仓库使用下文的构建命令生成发行包；`pnpm run start:enterprise-web` 只属于旧 fork。
 
-### 从当前项目生成发行包
+### 生成并验证发行包
+
+先在兼容的官方 Harness 检出目录运行 `pnpm install`，然后在本插件仓库执行：
 
 ```sh
-pnpm run build
-pnpm run pack:enterprise
-pnpm run export:enterprise
+node enterprise/build.mjs --harness /absolute/path/to/official-harness --ref HEAD --verify
 ```
 
-打包命令会打印 `.tgz` 的绝对路径；同目录的 `compatibility.json` 记录对应 Harness 版本。一个归档包含企业 bundle 和全部企业子插件，不要求把这些子插件分别发布到 npm。官方运行库仍由 Harness 安装提供；不要删除或替换其运行库。
-
-导出命令打印独立源码目录。将这个目录完整复制到新的插件仓库，之后只维护其中的企业源码和构建工具。导出白名单不包括 `.env`、用户凭据、Session 数据、`node_modules` 或官方源码。
+`--verify` 在临时 SDK 副本中构建产物、检查测试类型并运行企业插件的定向测试。构建只借用官方目录中已安装的第三方依赖，所有 workspace 包解析到临时副本。命令打印 `.tgz` 的绝对路径；同目录的 `compatibility.json` 记录对应 Harness 版本。一个归档包含企业 bundle 和全部企业子插件，官方运行库仍由 Harness 提供。
 
 ### 安装到官方 Web
 

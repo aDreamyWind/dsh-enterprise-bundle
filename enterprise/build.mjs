@@ -8,7 +8,7 @@ import { tmpdir } from 'node:os'
 import { packEnterprise } from './pack.mjs'
 
 const source = resolve(dirname(fileURLToPath(import.meta.url)), '..')
-const { values } = parseArgs({ options: { harness: { type: 'string' }, ref: { type: 'string' }, out: { type: 'string' } } })
+const { values } = parseArgs({ options: { harness: { type: 'string' }, ref: { type: 'string' }, out: { type: 'string' }, verify: { type: 'boolean', default: false } } })
 if (values.harness === undefined) throw new Error('Usage: node enterprise/build.mjs --harness /path/to/installed-official-checkout [--ref HEAD] [--out dist]')
 const sdk = resolve(values.harness)
 if (!existsSync(join(sdk, 'node_modules/typescript/bin/tsc'))) throw new Error('Run pnpm install in the official checkout first')
@@ -35,20 +35,44 @@ const expected = existsSync(join(source, 'compatibility.json'))
   ? JSON.parse(readFileSync(join(source, 'compatibility.json'), 'utf8')).harnessVersion
   : JSON.parse(readFileSync(join(source, 'package.json'), 'utf8')).version
 if (sdkVersion !== expected) throw new Error(`Plugin targets Harness ${expected}, not ${sdkVersion}; port and test the plugin before changing compatibility.json`)
-mkdirSync(join(assembled, 'node_modules'))
-for (const entry of readdirSync(join(sdk, 'node_modules'), { withFileTypes: true })) {
-  if (entry.name.startsWith('.pnpm-task-run-state')) continue
-  symlinkSync(join(sdk, 'node_modules', entry.name), join(assembled, 'node_modules', entry.name),
-    process.platform === 'win32' && entry.isDirectory() ? 'junction' : entry.isDirectory() ? 'dir' : 'file')
-}
+const sdkPackages = new Map(globSync([
+  'packages/*/*/package.json', 'vendor/*/package.json', 'apps/*/package.json',
+  'native/system/package.json', 'native/system/packages/*/package.json',
+], { cwd: assembled }).map(file => [
+  JSON.parse(readFileSync(join(assembled, file), 'utf8')).name, join(assembled, dirname(file)),
+]))
 const dependencyDirectories = [join(sdk, 'node_modules'), ...globSync([
   'packages/*/*/node_modules', 'vendor/*/node_modules', 'apps/*/node_modules',
   'native/system/node_modules', 'native/system/packages/*/node_modules',
+  'benchmarks/node_modules', 'benchmarks/*/node_modules', 'website/node_modules',
 ], { cwd: sdk }).map(path => join(sdk, path))]
-for (const directory of dependencyDirectories.slice(1)) {
+
+/** Keep SDK package identities inside the temporary copy while borrowing third-party installations. */
+function dependencyTarget(installed) {
+  const file = join(installed, 'package.json')
+  if (!existsSync(file)) return installed
+  const name = JSON.parse(readFileSync(file, 'utf8')).name
+  return sdkPackages.get(name) ?? installed
+}
+
+/** Mirror one dependency directory without sharing mutable workspace package links. */
+function mirrorDependencies(directory, target) {
+  mkdirSync(target, { recursive: true })
+  for (const entry of readdirSync(directory, { withFileTypes: true })) {
+    if (entry.name.startsWith('.pnpm-task-run-state')) continue
+    if (entry.name.startsWith('@')) {
+      mirrorDependencies(join(directory, entry.name), join(target, entry.name))
+      continue
+    }
+    const installed = dependencyTarget(join(directory, entry.name))
+    symlinkSync(installed, join(target, entry.name),
+      process.platform === 'win32' && !entry.isFile() ? 'junction' : entry.isFile() ? 'file' : 'dir')
+  }
+}
+for (const directory of dependencyDirectories) {
   const target = join(assembled, directory.slice(sdk.length + 1))
   if (!existsSync(dirname(target))) continue
-  symlinkSync(directory, target, process.platform === 'win32' ? 'junction' : 'dir')
+  mirrorDependencies(directory, target)
 }
 const paths = JSON.parse(readFileSync(join(source, 'enterprise/packages.json'), 'utf8'))
 for (const path of paths) cpSync(join(source, path), join(assembled, path), {
@@ -67,7 +91,7 @@ for (const path of paths) {
   for (const name of Object.keys(dependencies)) {
     const local = owned.get(name)
     const installed = local === undefined
-      ? dependencyDirectories.map(directory => join(directory, name)).find(directory => existsSync(join(directory, 'package.json')))
+      ? sdkPackages.get(name) ?? dependencyDirectories.map(directory => join(directory, name)).find(directory => existsSync(join(directory, 'package.json')))
       : join(assembled, local)
     if (installed === undefined) throw new Error(`SDK installation lacks ${name}, required by ${manifest.name}`)
     const link = join(modules, name)
@@ -101,4 +125,10 @@ writeFileSync(join(assembled, 'tsconfig.host.json'), JSON.stringify(host, null, 
 writeFileSync(join(assembled, 'tsconfig.client.json'), JSON.stringify(client, null, 2) + '\n')
 run(process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm', ['--config.verifyDepsBeforeRun=false', 'run', 'build:artifacts'], assembled,
   { env: { ...process.env, DSH_CLIENT_COMMIT_HASH: revision.stdout.trim(), DSH_GATE_CONCURRENCY: process.env.DSH_GATE_CONCURRENCY ?? '2' }, shell: process.platform === 'win32' })
+if (values.verify) {
+  const options = { env: { ...process.env, DSH_CLIENT_COMMIT_HASH: revision.stdout.trim() }, shell: process.platform === 'win32' }
+  const pnpm = process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm'
+  run(pnpm, ['--config.verifyDepsBeforeRun=false', 'run', 'build:check'], assembled, options)
+  run(pnpm, ['--config.verifyDepsBeforeRun=false', 'exec', 'vitest', 'run', ...paths.map(path => `${path}/tests`), '--maxWorkers=2'], assembled, options)
+}
 console.log(packEnterprise(assembled, join(output, 'releases')))
