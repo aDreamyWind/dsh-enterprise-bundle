@@ -4,11 +4,13 @@ dsh-enterprise-bundle 是面向 DeepSeek Harness Web 和 Desktop 的独立插件
 
 [中文部署指南](enterprise/README.zh.md) · [English setup guide](enterprise/README.md)
 
-## 功能
+## 解决什么问题
 
-- **企业登录**。通过 Harness Admin 的 OIDC 客户端接入单点登录。
-- **模型访问**。通过企业网关调用模型，支持企业模型目录、默认模型和会话内模型选择。模型权限和额度由 Harness Admin 管理。
-- **员工工具**。按员工授权加载 MCP 工具连接。启用后需要为 OIDC 客户端授予 `mcp.invoke`。
+| 企业接入场景 | 插件提供的能力 |
+| --- | --- |
+| 员工用公司账号进入 Harness | Web 和 Desktop 都可以接入 Harness Admin 的 OIDC 单点登录。 |
+| 管理员统一管理模型权限和额度 | Harness 从 Admin 获取员工可用的模型目录，把会话中的模型请求发往企业网关。管理员在 Admin 管理模型权限、额度和用量。 |
+| 团队按员工或部门分配工具 | 管理员在 Admin 授权 MCP 连接，插件在员工登录后加载该账号获准使用的工具。默认 OIDC 配置申请 `mcp.invoke`。 |
 
 ## 准备 Harness Admin
 
@@ -83,9 +85,35 @@ DSH_ENTERPRISE_ALLOW_LOOPBACK_HTTP=true pnpm dsh --profile enterprise-web --port
 
 ## 员工使用
 
-1. 打开配置好的 Harness。Web 在登录页点击「使用统一登录」，Desktop 从欢迎页发起登录。
-2. 在浏览器中用 Harness Admin 的企业员工账号登录并确认授权，然后返回 Harness。
-3. 新建会话，从模型选择器选择管理员授予的模型，发一条消息验证调用。已授权的 MCP 工具会随账号加载。如果账号设置里出现「更新 MCP 授权」，点击并重新登录。
+以下截图来自安装了本插件的 Harness Web，使用本地演示账号、模型目录和网关回复。
+
+1. **统一登录**。Web 在登录页点击「使用统一登录」，Desktop 从欢迎页发起登录。在浏览器用 Harness Admin 的员工账号登录并确认授权，然后返回 Harness。
+
+   ![Harness Web 的企业登录弹窗，包含使用统一登录按钮](docs/screenshots/enterprise-sso.png)
+
+2. **选择模型**。新建会话，打开输入框右下角的模型选择器，再展开「模型」。在 Harness Admin 分组中选择管理员授权的模型。
+
+   ![模型菜单展开后显示 Harness Admin 分组和两个演示模型](docs/screenshots/enterprise-models.png)
+
+3. **验证调用**。发送一条消息并确认收到回复。获授权的 MCP 工具随员工账号加载。如果「设置 → 企业账号」提示「更新 MCP 授权」，点击并重新登录。
+
+   ![企业推理模型通过演示网关返回会话回复](docs/screenshots/enterprise-chat.png)
+
+## 卸载插件
+
+1. 如需退出企业账号，先在 Harness 的企业账号设置中退出登录。然后完全退出 Desktop，或停止对应的 Web Host。
+2. 编辑对应 profile 的 `cordis.patch.yml`，删除为插件添加的企业配置条目，保留其他设置。Web 选择过模型后可能写入 `enterprise-default-model`，也要删除这一整条。Desktop 可对照当时合入的示例。 [Desktop 配置示例](enterprise/desktop.patch.example.yml)
+3. 在当初安装插件的 profile 上执行卸载命令。Desktop 使用桌面安装包附带的 `dsh`，Web 在兼容的 Harness 源码目录中运行。
+
+   ```sh
+   # Desktop
+   dsh plugin --profile desktop remove dsh-enterprise-bundle
+
+   # Web
+   pnpm dsh plugin --profile enterprise-web remove dsh-enterprise-bundle
+   ```
+
+4. 重新启动对应应用或 Web profile。已有会话如果仍选着企业模型，切换到当前可用的模型再继续。Web 工作目录的 `.env` 中，专供此插件使用的 `HARNESS_ADMIN_*` 条目也可以清理。
 
 ## 从源码构建
 

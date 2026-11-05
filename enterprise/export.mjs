@@ -34,4 +34,5 @@ writeFileSync(join(destination, 'package.json'), JSON.stringify({
 cpSync(join(root, 'compatibility.json'), join(destination, 'compatibility.json'))
 writeFileSync(join(destination, '.gitignore'), "# Build output and dependencies\ndist/\nlib/\nnode_modules/\n*.tsbuildinfo\n*.tgz\n\n# Local configuration and credentials\n.env\n.env.*\n!.env.example\n\n# Logs, coverage, and caches\n*.log\ncoverage/\n.cache/\n\n# Editor and OS files\n.idea/\n.vscode/\n.DS_Store\nThumbs.db\n")
 cpSync(join(root, 'README.md'), join(destination, 'README.md'))
+cpSync(join(root, 'docs/screenshots'), join(destination, 'docs/screenshots'), { recursive: true })
 console.log(destination)
