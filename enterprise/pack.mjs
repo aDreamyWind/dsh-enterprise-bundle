@@ -87,7 +87,7 @@ export function packEnterprise(root, output, sourceLicense = join(root, 'LICENSE
     delete manifest.private
     manifest.repository = {
       type: 'git',
-      url: 'git+https://github.com/aDreamyWind/Harness-Enterprise-Plugins.git',
+      url: 'git+https://github.com/aDreamyWind/dsh-enterprise-bundle.git',
       directory: pkg.path,
     }
     manifest.files = ['lib', 'locale', 'cordis.patch.yml', 'README.md', 'README.zh.md', 'LICENSE', 'THIRD_PARTY_LICENSES', '.env.example', 'desktop.patch.example.yml']

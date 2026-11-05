@@ -33,5 +33,5 @@ writeFileSync(join(destination, 'package.json'), JSON.stringify({
 }, null, 2) + '\n')
 writeFileSync(join(destination, 'compatibility.json'), JSON.stringify({ harnessVersion: sdkVersion }, null, 2) + '\n')
 writeFileSync(join(destination, '.gitignore'), "# Build output and dependencies\ndist/\nlib/\nnode_modules/\n*.tsbuildinfo\n*.tgz\n\n# Local configuration and credentials\n.env\n.env.*\n!.env.example\n\n# Logs, coverage, and caches\n*.log\ncoverage/\n.cache/\n\n# Editor and OS files\n.idea/\n.vscode/\n.DS_Store\nThumbs.db\n")
-writeFileSync(join(destination, 'README.md'), '# Harness Enterprise Plugins\n\nDeepSeek Harness 的独立企业插件，提供 OIDC 单点登录、企业模型网关和员工 MCP 工具连接。兼容版本见 [compatibility.json](compatibility.json)。\n\n源码按 [MIT 许可证](LICENSE) 提供。安装包随附打入包内的上游及第三方代码的许可文本。\n\n- [中文使用与构建指南](enterprise/README.zh.md)\n- [English usage and build guide](enterprise/README.md)\n')
+cpSync(join(root, 'README.md'), join(destination, 'README.md'))
 console.log(destination)
