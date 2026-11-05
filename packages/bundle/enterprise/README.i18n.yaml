@@ -5,30 +5,30 @@
 /:
   en: 54e58b86a6525bd1
   zh: 5d79dd93fd577616
-/xiaohangongzuo-dsh-enterprise-bundle:
-  en: 3f9e3f06b7bb15ed
-  zh: f876a544fe9a76db
-/xiaohangongzuo-dsh-enterprise-bundle/summary:
+/dsh-enterprise-bundle:
+  en: af6b98957d3301df
+  zh: eef303685035b6e4
+/dsh-enterprise-bundle/summary:
   en: 06896bdca85d5ac5
   zh: 04e9a8c67ad11121
-/xiaohangongzuo-dsh-enterprise-bundle/table-of-contents:
+/dsh-enterprise-bundle/table-of-contents:
   en: 582ae86166e7a9bb
   zh: d80c894376df9f63
-/xiaohangongzuo-dsh-enterprise-bundle/use-this-bundle:
+/dsh-enterprise-bundle/use-this-bundle:
   en: 0ba60cabb12287d1
   zh: 5d1e08f43518ccc4
-/xiaohangongzuo-dsh-enterprise-bundle/configuration:
+/dsh-enterprise-bundle/configuration:
   en: 4fdb7e0f668b8c2a
   zh: 7c910b81d82dcca6
-/xiaohangongzuo-dsh-enterprise-bundle/model-experience:
+/dsh-enterprise-bundle/model-experience:
   en: a9bab90e55d65117
   zh: 412a0541bb6b0f29
-/xiaohangongzuo-dsh-enterprise-bundle/model-experience/kv-cache-effect:
+/dsh-enterprise-bundle/model-experience/kv-cache-effect:
   en: ca3015e252db0114
   zh: 4bc2f564df7095eb
-/xiaohangongzuo-dsh-enterprise-bundle/known-limitations-and-deferred-work:
+/dsh-enterprise-bundle/known-limitations-and-deferred-work:
   en: 2045fac5b7e09980
   zh: 6cb8f9fe122351bd
-/xiaohangongzuo-dsh-enterprise-bundle/known-limitations-and-deferred-work/dev-note:
+/dsh-enterprise-bundle/known-limitations-and-deferred-work/dev-note:
   en: daf904a6d35eb344
   zh: 175e52e05a15b86f

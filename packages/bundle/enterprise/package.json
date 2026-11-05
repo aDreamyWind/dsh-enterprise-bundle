@@ -1,5 +1,5 @@
 {
-  "name": "@xiaohangongzuo/dsh-enterprise-bundle",
+  "name": "dsh-enterprise-bundle",
   "description": "Harness Admin OIDC and model-gateway layer for enterprise Web and Desktop distributions",
   "version": "0.2.2",
   "publishConfig": {

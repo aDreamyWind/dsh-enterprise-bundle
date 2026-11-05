@@ -3,7 +3,7 @@ description: "企业 bundle 为可发行的 Web 与 Desktop 企业版提供 Harn
 kind: "package-bundle"
 ---
 
-# @xiaohangongzuo/dsh-enterprise-bundle
+# dsh-enterprise-bundle
 
 [English](README.md) | 中文
 
