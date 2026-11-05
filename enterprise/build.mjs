@@ -31,9 +31,7 @@ const assembled = join(work, 'workspace')
 mkdirSync(assembled)
 run('tar', ['-xf', join(work, 'sdk.tar'), '-C', assembled], sdk)
 const sdkVersion = JSON.parse(readFileSync(join(assembled, 'package.json'), 'utf8')).version
-const expected = existsSync(join(source, 'compatibility.json'))
-  ? JSON.parse(readFileSync(join(source, 'compatibility.json'), 'utf8')).harnessVersion
-  : JSON.parse(readFileSync(join(source, 'package.json'), 'utf8')).version
+const expected = JSON.parse(readFileSync(join(source, 'compatibility.json'), 'utf8')).harnessVersion
 if (sdkVersion !== expected) throw new Error(`Plugin targets Harness ${expected}, not ${sdkVersion}; port and test the plugin before changing compatibility.json`)
 const sdkPackages = new Map(globSync([
   'packages/*/*/package.json', 'vendor/*/package.json', 'apps/*/package.json',

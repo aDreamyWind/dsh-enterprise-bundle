@@ -12,7 +12,9 @@ dsh-enterprise-bundle 是面向 DeepSeek Harness Web 和 Desktop 的独立插件
 
 ## 下载并安装
 
-从 [GitHub Releases](https://github.com/aDreamyWind/dsh-enterprise-bundle/releases) 选择与你的 DeepSeek Harness 版本匹配的发行版，在该版本的 **Assets** 中下载企业插件的 `.tgz` 安装包。当前兼容版本见 [compatibility.json](compatibility.json)。如果暂时没有可用的发行包，可以[从源码构建](#从源码构建)。
+企业插件 `0.2.2` 是正式版，适配 DeepSeek Harness `0.2.2-alpha.2`。宿主兼容版本记录在 [compatibility.json](compatibility.json)。
+
+从 [GitHub Releases](https://github.com/aDreamyWind/dsh-enterprise-bundle/releases) 选择与宿主版本匹配的发行版，在 **Assets** 中下载 `.tgz` 安装包。如果暂时没有可用的发行包，可以[从源码构建](#从源码构建)。
 
 运行前需在 Harness Admin 中准备 OIDC 客户端和模型网关。启用员工 MCP 工具时，还需配置员工连接目录。以下命令中的 `/absolute/path/to/enterprise-bundle.tgz` 请替换为下载文件的实际路径。
 

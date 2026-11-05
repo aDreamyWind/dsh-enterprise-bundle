@@ -26,12 +26,12 @@ for (const file of ['packages.json', 'pack.mjs', 'pack.test.mjs', 'build.mjs', '
 }
 cpSync(join(root, 'enterprise/.env.example'), join(destination, '.env.example'))
 cpSync(join(root, 'LICENSE'), join(destination, 'LICENSE'))
-const sdkVersion = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')).version
+const pluginVersion = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')).version
 writeFileSync(join(destination, 'package.json'), JSON.stringify({
-  name: '@adreamywind/harness-enterprise-source', private: true, type: 'module', version: sdkVersion,
+  name: '@adreamywind/harness-enterprise-source', private: true, type: 'module', version: pluginVersion,
   license: 'MIT', scripts: { build: 'node enterprise/build.mjs', 'test:pack': 'node --test enterprise/pack.test.mjs' },
 }, null, 2) + '\n')
-writeFileSync(join(destination, 'compatibility.json'), JSON.stringify({ harnessVersion: sdkVersion }, null, 2) + '\n')
+cpSync(join(root, 'compatibility.json'), join(destination, 'compatibility.json'))
 writeFileSync(join(destination, '.gitignore'), "# Build output and dependencies\ndist/\nlib/\nnode_modules/\n*.tsbuildinfo\n*.tgz\n\n# Local configuration and credentials\n.env\n.env.*\n!.env.example\n\n# Logs, coverage, and caches\n*.log\ncoverage/\n.cache/\n\n# Editor and OS files\n.idea/\n.vscode/\n.DS_Store\nThumbs.db\n")
 cpSync(join(root, 'README.md'), join(destination, 'README.md'))
 console.log(destination)

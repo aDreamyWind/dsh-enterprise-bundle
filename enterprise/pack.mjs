@@ -46,6 +46,7 @@ function thirdPartyLicenses(root, license) {
  * @returns {string} absolute tarball path.
  */
 export function packEnterprise(root, output, sourceLicense = join(root, 'LICENSE')) {
+  const harnessVersion = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')).version
   const paths = JSON.parse(readFileSync(join(root, 'enterprise/packages.json'), 'utf8'))
   const packages = paths.map(path => ({ path, manifest: JSON.parse(readFileSync(join(root, path, 'package.json'), 'utf8')) }))
   const owned = new Set(packages.map(pkg => pkg.manifest.name))
@@ -85,6 +86,7 @@ export function packEnterprise(root, output, sourceLicense = join(root, 'LICENSE
     delete manifest.devDependencies
     delete manifest.scripts
     delete manifest.private
+    manifest.engines = { ...manifest.engines, dsh: harnessVersion }
     manifest.repository = {
       type: 'git',
       url: 'git+https://github.com/aDreamyWind/dsh-enterprise-bundle.git',
@@ -107,7 +109,6 @@ export function packEnterprise(root, output, sourceLicense = join(root, 'LICENSE
     }
     if (index === 0) {
       writeFileSync(join(target, 'THIRD_PARTY_LICENSES'), notices)
-      manifest.engines = { ...manifest.engines, dsh: JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')).version }
       const publicExample = join(root, 'enterprise/.env.example')
       if (existsSync(publicExample)) cpSync(publicExample, join(target, '.env.example'))
       const desktopExample = join(root, 'enterprise/desktop.patch.example.yml')
@@ -138,7 +139,7 @@ export function packEnterprise(root, output, sourceLicense = join(root, 'LICENSE
   }
   const archive = join(release, packed.filename)
   writeFileSync(join(release, 'compatibility.json'), JSON.stringify({
-    harnessVersion: JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')).version,
+    harnessVersion,
     bundle: packages[0].manifest.name,
     version: packages[0].manifest.version,
     archive: packed.filename,

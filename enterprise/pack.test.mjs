@@ -1,12 +1,12 @@
 import assert from 'node:assert/strict'
 import { execFileSync } from 'node:child_process'
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { test } from 'node:test'
 import { packEnterprise } from './pack.mjs'
 
-test('the npm archive ships licenses and excludes build-machine metadata', t => {
+test('the npm archive preserves Harness compatibility and licenses without build-machine metadata', t => {
   const root = mkdtempSync(join(tmpdir(), 'enterprise-pack-test-'))
   t.after(() => rmSync(root, { recursive: true, force: true }))
   const bundle = 'packages/bundle/enterprise'
@@ -21,7 +21,7 @@ test('the npm archive ships licenses and excludes build-machine metadata', t => 
   }
   const json = (file, value) => write(file, JSON.stringify(value))
   json('enterprise/packages.json', [bundle, child])
-  json('package.json', { version: '1.0.0' })
+  json('package.json', { version: '0.8.0-beta.1' })
   json(`${bundle}/package.json`, { name: '@fixture/enterprise', version: '1.0.0' })
   json(`${child}/package.json`, { name: childName, version: '1.0.0' })
   write('LICENSE', 'Harness SDK license\n')
@@ -40,6 +40,15 @@ test('the npm archive ships licenses and excludes build-machine metadata', t => 
   const tar = (...args) => execFileSync('tar', args, { encoding: 'utf8' })
   const contents = tar('-tzf', archive).trimEnd().split('\n')
   const read = entry => tar('-xOzf', archive, entry)
+  const manifest = JSON.parse(read('package/package.json'))
+  const childManifest = JSON.parse(read(`${childEntry}/package.json`))
+  const compatibility = JSON.parse(readFileSync(join(dirname(archive), 'compatibility.json'), 'utf8'))
+  assert.equal(manifest.version, '1.0.0')
+  assert.equal(manifest.engines.dsh, '0.8.0-beta.1')
+  assert.equal(childManifest.version, manifest.version)
+  assert.equal(childManifest.engines.dsh, manifest.engines.dsh)
+  assert.equal(compatibility.version, manifest.version)
+  assert.equal(compatibility.harnessVersion, manifest.engines.dsh)
   assert.equal(read('package/LICENSE'), 'Enterprise plugin license\n')
   assert.equal(read(`${childEntry}/LICENSE`), 'Enterprise plugin license\n')
   const notices = read('package/THIRD_PARTY_LICENSES')
