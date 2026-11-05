@@ -3,7 +3,7 @@ description: "The enterprise bundle powers shipped Web and Desktop enterprise ed
 kind: "package-bundle"
 ---
 
-# @deepseek-ai/dsh-enterprise-bundle
+# @xiaohangongzuo/dsh-enterprise-bundle
 
 English | [中文](README.zh.md)
 

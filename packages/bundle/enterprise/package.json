@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-enterprise-bundle",
+  "name": "@xiaohangongzuo/dsh-enterprise-bundle",
   "description": "Harness Admin OIDC and model-gateway layer for enterprise Web and Desktop distributions",
   "version": "0.2.2",
   "publishConfig": {

@@ -18,9 +18,10 @@ const home = await realpath(resolve(values.home))
 const profile = values.profile
 assert.match(profile, /^[A-Za-z0-9][A-Za-z0-9_-]*$/)
 const profileDir = join(home, 'profiles', profile)
-const installed = await realpath(join(profileDir, 'node_modules/@deepseek-ai/dsh-enterprise-bundle'))
+const { name: bundleName } = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'))
+const installed = await realpath(join(profileDir, 'node_modules', bundleName))
 const manifest = JSON.parse(await readFile(join(installed, 'package.json'), 'utf8'))
-assert.equal(manifest.name, '@deepseek-ai/dsh-enterprise-bundle')
+assert.equal(manifest.name, bundleName)
 assert.ok(installed.startsWith(`${profileDir}/node_modules/`), 'the archive must be installed inside the profile, not linked to source')
 const fixture = values.fixture === undefined
   ? fileURLToPath(new URL('./fixtures/account.mjs', import.meta.url))
