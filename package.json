@@ -3,7 +3,9 @@
   "private": true,
   "type": "module",
   "version": "0.2.2-alpha.2",
+  "license": "MIT",
   "scripts": {
-    "build": "node enterprise/build.mjs"
+    "build": "node enterprise/build.mjs",
+    "test:pack": "node --test enterprise/pack.test.mjs"
   }
 }

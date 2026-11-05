@@ -4,9 +4,9 @@ English | [中文](README.zh.md)
 
 ## Usage
 
-An external bundle supplies enterprise login, gateway routing, model discovery, default-model policy, model selection, and employee MCP tool connections. Enterprise login and gateway routing do not rewrite upstream default-model services, Session APIs, model selectors, or profile templates. Immediate enterprise Skill menu updates require the Host to forward `skills/change` and the official skill UI to clear its cache on that event; the integration branch supplies this general fix. `packages.json` lists the enterprise-owned source directories.
+An external bundle supplies enterprise login, gateway routing, model discovery, default-model policy, model selection, and employee MCP tool connections. Enterprise login and gateway routing do not rewrite upstream default-model services, Session APIs, model selectors, or profile templates. Immediate enterprise skill menu updates require a Harness revision whose Host forwards `skills/change` and whose skill UI clears its cache on that event. `packages.json` lists the plugin source directories.
 
-The plugin targets Harness `0.2.2-alpha.2`, as declared in `compatibility.json`. The independent repository builds with the command below; `pnpm run start:enterprise-web` belongs to the older fork.
+The plugin targets Harness `0.2.2-alpha.2`, as declared in `compatibility.json`.
 
 ### Build and verify an archive
 
@@ -17,6 +17,8 @@ node enterprise/build.mjs --harness /absolute/path/to/official-harness --ref HEA
 ```
 
 `--verify` builds artifacts, checks test types, and runs the focused enterprise tests inside a temporary SDK copy. The build borrows installed third-party dependencies from the official checkout and resolves every workspace package inside the copy. The command prints the archive path; adjacent `compatibility.json` records the Harness version. One archive contains the enterprise bundle and all enterprise child plugins. Harness continues to provide its official runtime libraries.
+
+The archive includes a `LICENSE` for each package and `THIRD_PARTY_LICENSES` for inlined third-party code. The release omits source maps and compiler caches. Run `npm run test:pack` to check the archive layout and that build paths stay out of shipped files.
 
 ### Install into official Web
 
@@ -45,11 +47,11 @@ dsh plugin --profile desktop add /absolute/path/to/enterprise-bundle.tgz
 
 Replace the public addresses, Desktop client ID, and model code in [desktop.patch.example.yml](desktop.patch.example.yml), then append its rows to the desktop profile's `cordis.patch.yml`, preserving existing configuration; never distribute the Web client secret. This example supplies the default model, OIDC, gateway, and native account compatibility settings without employee environment variables. Desktop uses a public client, PKCE, and a random loopback port, while the enterprise plugin supplies account compatibility for native windows.
 
-A plugin cannot change the signed official application's icon, application name, update source, or native welcome copy. This branch's embedded-configuration and branding build features belong to an additional desktop distribution layer, not the plugin installation promise; retain that packaging source and signing configuration when those installers are required.
+A plugin cannot change the signed official application's icon, application name, update source, or native welcome copy.
 
 ## Build detached sources
 
-The export contains no official sources and applies no patches to the official checkout. Building requires a compatible official source checkout where `pnpm install` has completed, plus Node, pnpm, npm, Git, and tar:
+Building requires a compatible official source checkout where `pnpm install` has completed, plus Node, pnpm, npm, Git, and tar:
 
 ```sh
 node enterprise/build.mjs --harness /absolute/path/to/official-harness --ref HEAD
@@ -62,5 +64,3 @@ The gateway borrows compatible upstream configuration and authentication helpers
 ## Updates and retained data
 
 Back up the plugin source repository, releases, Host configuration, and Harness user data first. Validate login, token rotation, model discovery, model switching, and chat with a separate test profile before replacing production Harness. Do not delete Harness home, credentials, or Session directories to upgrade.
-
-Consider deleting the old feature branch only after detached sources are stored in your repository, releases are reproducible, the official installation passes verification, and desktop distribution sources are backed up. Deleting a branch does not save uncommitted changes; these tools never delete Git branches or publish remotely.

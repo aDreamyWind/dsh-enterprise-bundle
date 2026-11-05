@@ -5,6 +5,11 @@
   "publishConfig": {
     "access": "public"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/aDreamyWind/Harness-Enterprise-Plugins.git",
+    "directory": "packages/mcp/mcp-enterprise-connections"
+  },
   "type": "module",
   "main": "lib/index.js",
   "types": "lib/types/index.d.ts",

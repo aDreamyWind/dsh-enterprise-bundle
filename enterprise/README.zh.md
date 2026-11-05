@@ -4,9 +4,9 @@
 
 ## 使用方式
 
-企业登录、模型网关、动态模型目录、默认模型策略、模型选择器和员工 MCP 工具连接通过外置 bundle 加载。企业登录与模型网关不需要改写官方默认模型、Session API、模型选择器或 profile 模板。企业 Skills 的即时菜单刷新要求 Host 转发 `skills/change`，且官方技能 UI 在收到该事件时清理缓存；集成分支提供这项通用修复。`packages.json` 列出插件拥有的源文件目录。
+企业登录、模型网关、动态模型目录、默认模型策略、模型选择器和员工 MCP 工具连接通过外置 bundle 加载。企业登录与模型网关不需要改写官方默认模型、Session API、模型选择器或 profile 模板。企业技能菜单要即时刷新，所用的 Harness 版本必须支持 Host 转发 `skills/change`，并在技能界面收到事件时清理缓存。`packages.json` 列出插件源码目录。
 
-当前插件面向 `compatibility.json` 声明的 Harness `0.2.2-alpha.2`。独立仓库使用下文的构建命令生成发行包；`pnpm run start:enterprise-web` 只属于旧 fork。
+当前插件面向 `compatibility.json` 声明的 Harness `0.2.2-alpha.2`。
 
 ### 生成并验证发行包
 
@@ -17,6 +17,8 @@ node enterprise/build.mjs --harness /absolute/path/to/official-harness --ref HEA
 ```
 
 `--verify` 在临时 SDK 副本中构建产物、检查测试类型并运行企业插件的定向测试。构建只借用官方目录中已安装的第三方依赖，所有 workspace 包解析到临时副本。命令打印 `.tgz` 的绝对路径；同目录的 `compatibility.json` 记录对应 Harness 版本。一个归档包含企业 bundle 和全部企业子插件，官方运行库仍由 Harness 提供。
+
+归档为每个包附带 `LICENSE`，并在 `THIRD_PARTY_LICENSES` 中列出打入包内的第三方代码许可。发行包省去源码映射和编译缓存。运行 `npm run test:pack` 可检查归档结构，并确认发布文件中没有构建路径。
 
 ### 安装到官方 Web
 
@@ -45,11 +47,11 @@ dsh plugin --profile desktop add /absolute/path/to/enterprise-bundle.tgz
 
 请修改 [desktop.patch.example.yml](desktop.patch.example.yml) 中的公开地址、Desktop 客户端 ID 和模型编码，将这些行追加到桌面 profile 的 `cordis.patch.yml`，保留已有配置；不要分发 Web 客户端密钥。这个示例同时覆盖默认模型、OIDC、网关与原生账号兼容配置，不依赖员工设置环境变量。桌面使用公开客户端、PKCE 和随机回环端口，企业插件为原生窗口提供账号兼容接口。
 
-插件不能修改官方签名应用的图标、应用名、更新源和原生欢迎页文案。当前分支的内嵌配置与品牌打包能力属于额外的桌面分发层，不包含在插件安装承诺中；需要这类安装包时仍保留相应打包源码与签名配置。
+插件不能修改官方签名应用的图标、应用名、更新源和原生欢迎页文案。
 
 ## 独立源码构建
 
-导出目录不包含官方源码，也不需要对官方检出目录应用补丁。构建依赖一个已运行过 `pnpm install` 的兼容官方源码检出目录，以及 Node、pnpm、npm、Git 和 tar：
+构建需要一个已运行过 `pnpm install` 的兼容官方源码检出目录，以及 Node、pnpm、npm、Git 和 tar：
 
 ```sh
 node enterprise/build.mjs --harness /absolute/path/to/official-harness --ref HEAD
@@ -62,5 +64,3 @@ node enterprise/build.mjs --harness /absolute/path/to/official-harness --ref HEA
 ## 更新与保留数据
 
 先备份插件源码仓库、发行包、Host 配置和 Harness 用户数据；使用独立测试 profile 验证新官方版本的登录、刷新令牌、模型目录、模型切换和聊天，再替换生产运行版本。不要为了升级删除 Harness home、凭据或 Session 目录。
-
-只有在独立源码已经进入自己的仓库、发行包可重新构建、官方安装验证通过且桌面分发层已有备份后，才考虑删除旧功能分支。删除分支不会代替保存未提交改动；本工具不会执行任何 Git 分支删除或远程发布操作。

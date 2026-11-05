@@ -131,4 +131,4 @@ if (values.verify) {
   run(pnpm, ['--config.verifyDepsBeforeRun=false', 'run', 'build:check'], assembled, options)
   run(pnpm, ['--config.verifyDepsBeforeRun=false', 'exec', 'vitest', 'run', ...paths.map(path => `${path}/tests`), '--maxWorkers=2'], assembled, options)
 }
-console.log(packEnterprise(assembled, join(output, 'releases')))
+console.log(packEnterprise(assembled, join(output, 'releases'), join(source, 'LICENSE')))
